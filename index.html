@@ -29,16 +29,16 @@
         <label>キーワードを入力してください：</label>
         <div class="flex-row">
             <input type="text" id="keyword" placeholder="例：戦い、AI...">
-            <button class="secondary-btn" id="random-btn">ランダム</button>
+            <button class="secondary-btn" onclick="setRandomWord()">ランダム</button>
         </div>
-        <button class="primary-btn" id="gen-odai-btn">お題をAI生成</button>
+        <button class="primary-btn" onclick="generateAI()">お題をAI生成</button>
 
         <div style="margin: 20px 0; text-align: center; color: #A0A0A0; font-size: 0.8rem;">── または直接入力 ──</div>
 
         <label>お題を直接入力：</label>
         <div class="flex-row">
             <input type="text" id="manual-odai" placeholder="例：孫におじいちゃんがブチギレ。何があった？">
-            <button class="secondary-btn" id="manual-btn">確定</button>
+            <button class="secondary-btn" onclick="confirmManual()">確定</button>
         </div>
 
         <div id="odai-result-area"></div>
@@ -52,109 +52,49 @@
                 <option value="black">ブラック (Black)</option>
             </select>
             
-            <button class="primary-btn" id="show-ans-btn" style="background: linear-gradient(135deg, #ffffff 0%, #c0c0c0 100%);">回答を表示</button>
+            <button class="primary-btn" onclick="showAnswers()" style="background: linear-gradient(135deg, #ffffff 0%, #c0c0c0 100%);">回答を表示</button>
             
             <div id="answer-result-area"></div>
         </div>
 
         <div id="copy-section">
             <p style="font-size: 0.8rem; color: #C0C0C0;">合格（赤枠）をコピーします</p>
-            <button class="primary-btn" id="copy-btn" style="background: #C0C0C0;">選択した回答をコピー</button>
+            <button class="primary-btn" onclick="copyToClipboard()" style="background: #C0C0C0;">選択した回答をコピー</button>
         </div>
     </div>
 
     <script>
+        // 大事な変数はグローバルに配置
         let selectedOdaiText = "";
         let selectedAnswers = [];
         const randomWords = ["孫", "AI", "無人島", "コンビニ", "タイムマシン", "入れ歯", "メルカリ", "宇宙飛行士", "給食", "透明人間"];
 
-        const keywordInput = document.getElementById('keyword');
-        const manualInput = document.getElementById('manual-odai');
-        const odaiArea = document.getElementById('odai-result-area');
-        const setupSection = document.getElementById('answer-setup-section');
-        const copySection = document.getElementById('copy-section');
-
-        // ランダム単語をセットする関数
+        // 1. ランダム単語のセット
         function setRandomWord() {
-            keywordInput.value = randomWords[Math.floor(Math.random() * randomWords.length)];
+            const word = randomWords[Math.floor(Math.random() * randomWords.length)];
+            document.getElementById('keyword').value = word;
         }
 
-        // ページ読み込み時に初期実行
-        window.onload = setRandomWord;
-
-        // ランダムボタンクリック時
-        document.getElementById('random-btn').addEventListener('click', setRandomWord);
-
-        document.getElementById('gen-odai-btn').addEventListener('click', () => {
-            const kw = keywordInput.value;
+        // 2. AIお題生成
+        function generateAI() {
+            const kw = document.getElementById('keyword').value;
             if (!kw) { alert("キーワードを入れてください"); return; }
+            
             const testOdaiList = [
                 `「AIすぎる${kw}」にありがちな人間味のありすぎるバグとは？`,
                 `100年後の${kw}に追加された、法に触れそうな新機能とは？`,
                 `世界一やる気のない${kw}。持ち主をどう裏切る？`
             ];
-            odaiArea.innerHTML = `<p class="section-title">「${kw}」の厳選お題3選</p>`;
-            setupSection.style.display = 'none';
-            copySection.style.display = 'none';
+
+            const area = document.getElementById('odai-result-area');
+            area.innerHTML = `<p class="section-title">「${kw}」の厳選お題3選</p>`;
+            
+            document.getElementById('answer-setup-section').style.display = 'none';
+            document.getElementById('copy-section').style.display = 'none';
+
             testOdaiList.forEach((txt) => {
                 const div = document.createElement('div');
                 div.className = 'item';
                 div.innerText = txt;
                 div.onclick = function() {
-                    document.querySelectorAll('.item').forEach(el => el.classList.remove('selected-red'));
-                    this.classList.add('selected-red');
-                    selectedOdaiText = txt;
-                    setupSection.style.display = 'block';
-                };
-                odaiArea.appendChild(div);
-            });
-        });
-
-        document.getElementById('manual-btn').addEventListener('click', () => {
-            const txt = manualInput.value;
-            if (!txt) { alert("お題を入力してください"); return; }
-            odaiArea.innerHTML = `<p class="section-title">手動入力のお題</p>`;
-            const div = document.createElement('div');
-            div.className = 'item selected-red';
-            div.innerText = txt;
-            odaiArea.appendChild(div);
-            selectedOdaiText = txt;
-            setupSection.style.display = 'block';
-        });
-
-        document.getElementById('show-ans-btn').addEventListener('click', () => {
-            const area = document.getElementById('answer-result-area');
-            const type = document.getElementById('tone').options[document.getElementById('tone').selectedIndex].text;
-            area.innerHTML = `<p class="section-title">回答 20案（${type}）</p>`;
-            selectedAnswers = [];
-            for(let i=1; i<=20; i++) {
-                const ansText = `[${type}] 回案 ${i}: ${selectedOdaiText.substring(0,8)}...への回答案。`;
-                const div = document.createElement('div');
-                div.className = 'item';
-                div.innerText = ansText;
-                div.onclick = function() {
-                    if (this.classList.contains('selected-red')) {
-                        this.classList.remove('selected-red');
-                        selectedAnswers = selectedAnswers.filter(a => a !== ansText);
-                    } else {
-                        this.classList.add('selected-red');
-                        selectedAnswers.push(ansText);
-                    }
-                    copySection.style.display = selectedAnswers.length > 0 ? 'block' : 'none';
-                };
-                area.appendChild(div);
-            }
-        });
-
-        document.getElementById('copy-btn').addEventListener('click', () => {
-            const textArea = document.createElement("textarea");
-            textArea.value = selectedAnswers.join('\n');
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand("copy");
-            document.body.removeChild(textArea);
-            alert("コピーしました！");
-        });
-    </script>
-</body>
-</html>
+                    document.
