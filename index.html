@@ -3,130 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>大喜利アンサー - 動画制作用お題生成</title>
+    <title>大喜利アンサー - Prototype</title>
     <style>
-        body {
-            background-color: #001220;
-            color: #E5E5E5;
-            font-family: sans-serif;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .header {
-            width: 100%;
-            max-width: 600px;
-            border-bottom: 1px solid #C0C0C0;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-            text-align: left;
-        }
-        .main-card {
-            background-color: #001f33;
-            padding: 25px;
-            border-radius: 10px;
-            width: 100%;
-            max-width: 600px;
-            border: 1px solid #334b5e;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        input, select, button {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border-radius: 5px;
-            border: none;
-            font-size: 1rem;
-            box-sizing: border-box;
-        }
+        body { background-color: #001220; color: #E5E5E5; font-family: sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .header { width: 100%; max-width: 600px; border-bottom: 1px solid #C0C0C0; padding-bottom: 15px; margin-bottom: 20px; }
+        .main-card { background-color: #001f33; padding: 25px; border-radius: 10px; width: 100%; max-width: 600px; border: 1px solid #334b5e; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        input, select, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; font-size: 1rem; box-sizing: border-box; }
         input { background: #e0e0e0; color: #333; }
-        button {
-            background: linear-gradient(135deg, #E5E5E5 0%, #A0A0A0 100%);
-            color: #001220;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-        button:hover { opacity: 0.8; }
-        .answer-item {
-            background: rgba(255,255,255,0.05);
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 5px;
-            cursor: pointer;
-            border: 2px solid transparent;
-            font-size: 1.1rem;
-            line-height: 1.5;
-        }
-        .selected {
-            border: 2px solid #FF0000 !important;
-            background: rgba(255, 0, 0, 0.2) !important;
-        }
-        .copy-section {
-            margin-top: 20px;
-            padding: 15px;
-            background: #002b47;
-            border-radius: 5px;
-            display: none;
-            width: 100%;
-        }
+        button { background: linear-gradient(135deg, #E5E5E5 0%, #A0A0A0 100%); color: #001220; font-weight: bold; cursor: pointer; }
+        .item { background: rgba(255,255,255,0.05); padding: 15px; margin: 10px 0; border-radius: 5px; cursor: pointer; border: 2px solid transparent; }
+        .selected { border: 2px solid #FF0000 !important; background: rgba(255, 0, 0, 0.2) !important; }
+        .step-section { margin-top: 20px; display: none; border-top: 1px dashed #334b5e; padding-top: 20px; }
+        .copy-section { margin-top: 20px; padding: 15px; background: #002b47; border-radius: 5px; display: none; }
     </style>
 </head>
 <body>
 
     <div class="header">
         <h2 style="margin:0;">大喜利アンサー</h2>
-        <p style="font-size: 0.85rem; color: #A0A0A0; margin-top:5px;">動画制作用・お題生成プロトタイプ</p>
     </div>
 
     <div class="main-card">
         <label>キーワード：</label>
-        <input type="text" id="keyword" placeholder="例：戦い、トマト、AI...">
-        
-        <label>お題のトーン：</label>
-        <select id="tone">
-            <option value="intellectual">知的 (Intellectual)</option>
-            <option value="surreal">シュール (Surreal)</option>
-            <option value="black">ブラック (Black)</option>
-        </select>
-
+        <input type="text" id="keyword" placeholder="例：戦い、AI...">
         <button onclick="generateOdai()">大喜利のお題を生成</button>
 
-        <div id="result-area"></div>
+        <div id="odai-area"></div>
+
+        <div id="answer-step" class="step-section">
+            <p style="color: #A0A0A0; font-size: 0.9rem;">決定したお題に対して回答を生成します</p>
+            <label>回答のトーン：</label>
+            <select id="tone">
+                <option value="normal">選択なし（通常）</option>
+                <option value="intellectual">知的 (Intellectual)</option>
+                <option value="surreal">シュール (Surreal)</option>
+                <option value="black">ブラック (Black)</option>
+            </select>
+            <button onclick="generateAnswers()" style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);">回答を20案表示する</button>
+            
+            <div id="answer-area"></div>
+        </div>
 
         <div id="copy-section" class="copy-section">
-            <p style="font-size: 0.8rem; color: #C0C0C0; margin-top:0;">合格（赤枠）を選んでください</p>
-            <div id="selected-texts" style="margin-bottom:10px; font-size: 0.95rem;"></div>
+            <p style="font-size: 0.8rem; color: #C0C0C0; margin-top:0;">合格（赤枠）をコピーします</p>
             <button onclick="copyToClipboard()" style="background: #C0C0C0;">テキストをコピー</button>
         </div>
     </div>
 
     <script>
+        let selectedOdai = "";
         let selectedAnswers = [];
 
+        // お題を3つ生成
         function generateOdai() {
             const kw = document.getElementById('keyword').value;
             if (!kw) { alert("キーワードを入れてください"); return; }
             
-            // 動画制作に適した厳選3お題（テスト用）
             const testOdaiList = [
                 `「AIすぎる${kw}」にありがちな、人間味のありすぎるバグとは？`,
                 `100年後の${kw}に追加された、法に触れそうな新機能とは？`,
                 `世界一やる気のない${kw}。持ち主をどう裏切る？`
             ];
 
-            const resultArea = document.getElementById('result-area');
-            resultArea.innerHTML = `<p style="border-left: 3px solid #E5E5E5; padding-left: 10px; margin-top:20px;"><strong>「${kw}」をキーワードにした厳選お題3選</strong></p>`;
+            const area = document.getElementById('odai-area');
+            area.innerHTML = `<p style="border-left: 3px solid #E5E5E5; padding-left: 10px; margin-top:20px;"><strong>「${kw}」をキーワードにした厳選お題3選</strong></p>`;
             
-            document.getElementById('copy-section').style.display = 'block';
-            selectedAnswers = [];
-            updateSelectedList();
-
             testOdaiList.forEach((txt) => {
                 const div = document.createElement('div');
-                div.className = 'answer-item';
+                div.className = 'item';
+                div.innerText = txt;
+                div.onclick = function() {
+                    document.querySelectorAll('#odai-area .item').forEach(el => el.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedOdai = txt;
+                    document.getElementById('answer-step').style.display = 'block';
+                };
+                area.appendChild(div);
+            });
+        }
+
+        // 回答を20個生成（テスト用）
+        function generateAnswers() {
+            if (!selectedOdai) { alert("お題を1つ選んでください"); return; }
+            
+            const area = document.getElementById('answer-area');
+            area.innerHTML = `<p style="border-left: 3px solid #FFD700; padding-left: 10px; margin-top:20px;"><strong>回答 20案</strong></p>`;
+            
+            for(let i=1; i<=20; i++) {
+                const txt = `テスト回答 ${i}：${selectedOdai}に対する答えのサンプルテキストです。`;
+                const div = document.createElement('div');
+                div.className = 'item';
                 div.innerText = txt;
                 div.onclick = function() {
                     if (this.classList.contains('selected')) {
@@ -136,26 +102,21 @@
                         this.classList.add('selected');
                         selectedAnswers.push(txt);
                     }
-                    updateSelectedList();
+                    document.getElementById('copy-section').style.display = selectedAnswers.length > 0 ? 'block' : 'none';
                 };
-                resultArea.appendChild(div);
-            });
-        }
-
-        function updateSelectedList() {
-            const display = document.getElementById('selected-texts');
-            display.innerHTML = selectedAnswers.map((a, i) => `<div>${i+1}: ${a}</div>`).join('');
+                area.appendChild(div);
+            }
         }
 
         function copyToClipboard() {
-            if (selectedAnswers.length === 0) { alert("お題を選んでください"); return; }
+            if (selectedAnswers.length === 0) return;
             const textArea = document.createElement("textarea");
             textArea.value = selectedAnswers.join('\n');
             document.body.appendChild(textArea);
             textArea.select();
             document.execCommand("copy");
             document.body.removeChild(textArea);
-            alert("コピーしました！動画制作にご活用ください！");
+            alert("コピーしました！");
         }
     </script>
 </body>
