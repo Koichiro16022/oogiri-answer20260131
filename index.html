@@ -9,15 +9,12 @@
         .main-card { background-color: #001f33; padding: 25px; border-radius: 10px; width: 100%; max-width: 600px; border: 1px solid #334b5e; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 5px; border: none; font-size: 1rem; box-sizing: border-box; }
         input, select { background: #e0e0e0; color: #333; }
-        
         .primary-btn { background: linear-gradient(135deg, #E5E5E5 0%, #A0A0A0 100%); color: #001220; font-weight: bold; cursor: pointer; }
         .secondary-btn { background: #334b5e; color: #fff; cursor: pointer; font-size: 0.9rem; }
         .clear-btn { background: #4a4a4a; color: #ffcccc; cursor: pointer; font-size: 0.9rem; border: 1px solid #5e3333; }
-        
         .item { background: rgba(255,255,255,0.05); padding: 15px; margin: 8px 0; border-radius: 5px; cursor: pointer; border: 2px solid transparent; }
         .selected-red { border: 2px solid #FF0000 !important; background: rgba(255, 0, 0, 0.1) !important; }
         .section-title { border-left: 3px solid #E5E5E5; padding-left: 10px; margin-top: 25px; font-weight: bold; color: #fff; }
-        
         #answer-setup-section, #copy-section { display: none; margin-top: 30px; border-top: 1px dashed #334b5e; padding-top: 20px; }
         .flex-row { display: flex; gap: 8px; align-items: center; width: 100%; }
         .flex-row input { flex: 1; }
@@ -29,7 +26,7 @@
     <div class="main-card">
         <label>キーワードを入力してください：</label>
         <div class="flex-row">
-            <input type="text" id="keyword" placeholder="例：戦い、AI...">
+            <input type="text" id="keyword">
             <button class="clear-btn" onclick="clearKeyword()">消去</button>
             <button class="secondary-btn" onclick="setRandomWord()">ランダム</button>
         </div>
@@ -45,7 +42,6 @@
         </div>
 
         <div id="odai-result-area"></div>
-
         <div id="answer-setup-section">
             <label>ユーモアの種類：</label>
             <select id="tone">
@@ -65,37 +61,9 @@
     </div>
 
     <script>
-        // グローバル定数
+        // 設定値
         const randomWords = ["孫", "AI", "無人島", "コンビニ", "タイムマシン", "入れ歯", "メルカリ", "宇宙飛行士", "給食", "透明人間"];
         let selectedOdaiText = "";
         let selectedAnswers = [];
 
-        // --- 修正の要：初期化をイベントリスナーに変更 ---
-        document.addEventListener('DOMContentLoaded', () => {
-            setRandomWord();
-        });
-
-        function setRandomWord() {
-            const el = document.getElementById('keyword');
-            if(el) {
-                const word = randomWords[Math.floor(Math.random() * randomWords.length)];
-                el.value = word;
-            }
-        }
-
-        function clearKeyword() {
-            const el = document.getElementById('keyword');
-            el.value = "";
-            el.focus();
-        }
-
-        function clearManual() {
-            const el = document.getElementById('manual-odai');
-            el.value = "";
-            el.focus();
-        }
-
-        function generateAI() {
-            const kw = document.getElementById('keyword').value;
-            if (!kw) { alert("キーワードを入れてください"); return; }
-            const testOdaiList =
+        // 【
