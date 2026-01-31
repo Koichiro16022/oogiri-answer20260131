@@ -11,15 +11,10 @@
         input, select { background: #e0e0e0; color: #333; }
         button { background: linear-gradient(135deg, #E5E5E5 0%, #A0A0A0 100%); color: #001220; font-weight: bold; cursor: pointer; }
         
-        /* お題と回答の共通アイテム */
         .item { background: rgba(255,255,255,0.05); padding: 15px; margin: 8px 0; border-radius: 5px; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
-        
-        /* 選択時の赤枠（共通ルール） */
         .selected-red { border: 2px solid #FF0000 !important; background: rgba(255, 0, 0, 0.1) !important; }
         
         .section-title { border-left: 3px solid #E5E5E5; padding-left: 10px; margin-top: 25px; font-weight: bold; color: #fff; }
-        
-        /* 非表示用 */
         #answer-setup-section, #copy-section { display: none; margin-top: 30px; border-top: 1px dashed #334b5e; padding-top: 20px; }
     </style>
 </head>
@@ -33,9 +28,9 @@
         <div id="odai-result-area"></div>
 
         <div id="answer-setup-section">
-            <label>回答のトーン：</label>
+            <label>ユーモアの種類：</label>
             <select id="tone">
-                <option value="none" selected>選択なし</option>
+                <option value="none" selected>選択なし（通常）</option>
                 <option value="intellectual">知的 (Intellectual)</option>
                 <option value="surreal">シュール (Surreal)</option>
                 <option value="black">ブラック (Black)</option>
@@ -69,65 +64,4 @@
             const area = document.getElementById('odai-result-area');
             area.innerHTML = `<p class="section-title">「${kw}」をキーワードにした厳選お題3選</p>`;
             
-            // 下のセクションをリセット
             document.getElementById('answer-setup-section').style.display = 'none';
-            document.getElementById('copy-section').style.display = 'none';
-            selectedAnswers = [];
-
-            testOdaiList.forEach((txt) => {
-                const div = document.createElement('div');
-                div.className = 'item';
-                div.innerText = txt;
-                div.onclick = function() {
-                    // お題の選択解除と再選択
-                    const items = document.querySelectorAll('#odai-result-area .item');
-                    items.forEach(el => el.classList.remove('selected-red'));
-                    this.classList.add('selected-red');
-                    
-                    selectedOdaiText = txt;
-                    // 強制的に表示
-                    document.getElementById('answer-setup-section').style.display = 'block';
-                };
-                area.appendChild(div);
-            });
-        }
-
-        function showAnswers() {
-            const area = document.getElementById('answer-result-area');
-            area.innerHTML = `<p class="section-title">回答 20案</p>`;
-            selectedAnswers = []; // 回答選択リストをリセット
-
-            for(let i=1; i<=20; i++) {
-                const ansText = `回答案 ${i}: これは${selectedOdaiText.substring(0,5)}...に対する回答例です。`;
-                const div = document.createElement('div');
-                div.className = 'item';
-                div.innerText = ansText;
-                
-                div.onclick = function() {
-                    if (this.classList.contains('selected-red')) {
-                        this.classList.remove('selected-red');
-                        selectedAnswers = selectedAnswers.filter(a => a !== ansText);
-                    } else {
-                        this.classList.add('selected-red');
-                        selectedAnswers.push(ansText);
-                    }
-                    // 1つでも選ばれたらコピーボタンを表示
-                    document.getElementById('copy-section').style.display = selectedAnswers.length > 0 ? 'block' : 'none';
-                };
-                area.appendChild(div);
-            }
-        }
-
-        function copyToClipboard() {
-            if (selectedAnswers.length === 0) return;
-            const textArea = document.createElement("textarea");
-            textArea.value = selectedAnswers.join('\n');
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand("copy");
-            document.body.removeChild(textArea);
-            alert("コピーしました！");
-        }
-    </script>
-</body>
-</html>
