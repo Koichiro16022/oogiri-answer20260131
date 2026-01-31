@@ -26,44 +26,112 @@
     <div class="main-card">
         <label>キーワードを入力してください：</label>
         <div class="flex-row">
-            <input type="text" id="keyword">
-            <button class="clear-btn" onclick="clearKeyword()">消去</button>
-            <button class="secondary-btn" onclick="setRandomWord()">ランダム</button>
+            <input type="text" id="kwInput">
+            <button class="clear-btn" onclick="doClearKw()">消去</button>
+            <button class="secondary-btn" onclick="doRandomKw()">ランダム</button>
         </div>
-        <button class="primary-btn" onclick="generateAI()">お題をAI生成</button>
+        <button class="primary-btn" onclick="doGenAI()">お題をAI生成</button>
 
         <div style="margin: 20px 0; text-align: center; color: #A0A0A0; font-size: 0.8rem;">── または直接入力 ──</div>
 
         <label>お題を直接入力：</label>
         <div class="flex-row">
-            <input type="text" id="manual-odai" placeholder="例：孫におじいちゃんがブチギレ。何があった？">
-            <button class="clear-btn" onclick="clearManual()">消去</button>
-            <button class="secondary-btn" onclick="confirmManual()">確定</button>
+            <input type="text" id="manualOdai" placeholder="例：孫におじいちゃんがブチギレ。何があった？">
+            <button class="clear-btn" onclick="doClearManual()">消去</button>
+            <button class="secondary-btn" onclick="doConfirmManual()">確定</button>
         </div>
 
-        <div id="odai-result-area"></div>
-        <div id="answer-setup-section">
+        <div id="resArea"></div>
+        <div id="setupSec">
             <label>ユーモアの種類：</label>
-            <select id="tone">
+            <select id="toneSel">
                 <option value="none" selected>選択なし（通常）</option>
                 <option value="intellectual">知的 (Intellectual)</option>
                 <option value="surreal">シュール (Surreal)</option>
                 <option value="black">ブラック (Black)</option>
             </select>
-            <button class="primary-btn" onclick="showAnswers()" style="background: linear-gradient(135deg, #ffffff 0%, #c0c0c0 100%);">回答を表示</button>
-            <div id="answer-result-area"></div>
+            <button class="primary-btn" onclick="doShowAns()" style="background: linear-gradient(135deg, #ffffff 0%, #c0c0c0 100%);">回答を表示</button>
+            <div id="ansArea"></div>
         </div>
 
-        <div id="copy-section">
+        <div id="copySec">
             <p style="font-size: 0.8rem; color: #C0C0C0;">合格（赤枠）をコピーします</p>
-            <button class="primary-btn" onclick="copyToClipboard()" style="background: #C0C0C0;">選択した回答をコピー</button>
+            <button class="primary-btn" onclick="doCopy()">選択した回答をコピー</button>
         </div>
     </div>
 
     <script>
-        // 設定値
-        const randomWords = ["孫", "AI", "無人島", "コンビニ", "タイムマシン", "入れ歯", "メルカリ", "宇宙飛行士", "給食", "透明人間"];
-        let selectedOdaiText = "";
-        let selectedAnswers = [];
+        const words = ["孫", "AI", "無人島", "コンビニ", "タイムマシン", "入れ歯", "メルカリ", "宇宙飛行士", "給食", "透明人間"];
+        let curOdai = "";
+        let selAns = [];
 
-        // 【
+        function doRandomKw() {
+            document.getElementById('kwInput').value = words[Math.floor(Math.random() * words.length)];
+        }
+
+        function doClearKw() {
+            const el = document.getElementById('kwInput');
+            el.value = ""; el.focus();
+        }
+
+        function doClearManual() {
+            const el = document.getElementById('manualOdai');
+            el.value = ""; el.focus();
+        }
+
+        function doGenAI() {
+            const kw = document.getElementById('kwInput').value;
+            if (!kw) return alert("キーワードを入れてください");
+            const list = [`AIすぎる${kw}のバグとは？`, `100年後の${kw}の新機能は？`, `やる気のない${kw}の裏切り方は？`];
+            const area = document.getElementById('resArea');
+            area.innerHTML = `<p class="section-title">「${kw}」のお題</p>`;
+            document.getElementById('setupSec').style.display = 'none';
+            list.forEach(t => {
+                const d = document.createElement('div');
+                d.className = 'item'; d.innerText = t;
+                d.onclick = function() {
+                    document.querySelectorAll('.item').forEach(e => e.classList.remove('selected-red'));
+                    this.classList.add('selected-red');
+                    curOdai = t; document.getElementById('setupSec').style.display = 'block';
+                };
+                area.appendChild(d);
+            });
+        }
+
+        function doConfirmManual() {
+            const t = document.getElementById('manualOdai').value;
+            if (!t) return alert("お題を入力してください");
+            document.getElementById('resArea').innerHTML = `<p class="section-title">手動入力のお題</p><div class="item selected-red">${t}</div>`;
+            curOdai = t; document.getElementById('setupSec').style.display = 'block';
+        }
+
+        function doShowAns() {
+            const area = document.getElementById('ansArea');
+            area.innerHTML = `<p class="section-title">回答 20案</p>`;
+            selAns = [];
+            for(let i=1; i<=20; i++) {
+                const txt = `回答案 ${i}: ${curOdai.substring(0,5)}...への回答。`;
+                const d = document.createElement('div');
+                d.className = 'item'; d.innerText = txt;
+                d.onclick = function() {
+                    this.classList.toggle('selected-red');
+                    if(this.classList.contains('selected-red')) selAns.push(txt);
+                    else selAns = selAns.filter(a => a !== txt);
+                    document.getElementById('copySec').style.display = selAns.length > 0 ? 'block' : 'none';
+                };
+                area.appendChild(d);
+            }
+        }
+
+        function doCopy() {
+            const t = document.createElement("textarea");
+            t.value = selAns.join('\n'); document.body.appendChild(t);
+            t.select(); document.execCommand("copy");
+            document.body.removeChild(t); alert("コピーしました！");
+        }
+
+        // 初期実行
+        doRandomKw();
+    </script>
+</body>
+</html>
