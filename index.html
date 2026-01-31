@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>大喜利アンサー - Prototype</title>
+    <title>大喜利アンサー - 動画制作用お題生成</title>
     <style>
         body {
             background-color: #001220;
@@ -21,6 +21,7 @@
             border-bottom: 1px solid #C0C0C0;
             padding-bottom: 15px;
             margin-bottom: 20px;
+            text-align: left;
         }
         .main-card {
             background-color: #001f33;
@@ -29,6 +30,7 @@
             width: 100%;
             max-width: 600px;
             border: 1px solid #334b5e;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
         input, select, button {
             width: 100%;
@@ -45,7 +47,9 @@
             color: #001220;
             font-weight: bold;
             cursor: pointer;
+            transition: 0.3s;
         }
+        button:hover { opacity: 0.8; }
         .answer-item {
             background: rgba(255,255,255,0.05);
             padding: 15px;
@@ -54,6 +58,7 @@
             cursor: pointer;
             border: 2px solid transparent;
             font-size: 1.1rem;
+            line-height: 1.5;
         }
         .selected {
             border: 2px solid #FF0000 !important;
@@ -72,13 +77,13 @@
 <body>
 
     <div class="header">
-        <h2>大喜利アンサー</h2>
-        <div>本日はあと<span id="count" style="font-weight:bold; color:#fff; border-bottom:2px solid #C0C0C0;">10</span>回使えます。</div>
+        <h2 style="margin:0;">大喜利アンサー</h2>
+        <p style="font-size: 0.85rem; color: #A0A0A0; margin-top:5px;">動画制作用・お題生成プロトタイプ</p>
     </div>
 
     <div class="main-card">
         <label>キーワード：</label>
-        <input type="text" id="keyword" placeholder="例：トマト、スマホ、AI...">
+        <input type="text" id="keyword" placeholder="例：戦い、トマト、AI...">
         
         <label>お題のトーン：</label>
         <select id="tone">
@@ -92,8 +97,8 @@
         <div id="result-area"></div>
 
         <div id="copy-section" class="copy-section">
-            <p style="font-size: 0.8rem; color: #C0C0C0;">合格（赤枠）を選んでください</p>
-            <div id="selected-texts" style="margin-bottom:10px;"></div>
+            <p style="font-size: 0.8rem; color: #C0C0C0; margin-top:0;">合格（赤枠）を選んでください</p>
+            <div id="selected-texts" style="margin-bottom:10px; font-size: 0.95rem;"></div>
             <button onclick="copyToClipboard()" style="background: #C0C0C0;">テキストをコピー</button>
         </div>
     </div>
@@ -105,6 +110,7 @@
             const kw = document.getElementById('keyword').value;
             if (!kw) { alert("キーワードを入れてください"); return; }
             
+            // 動画制作に適した厳選3お題（テスト用）
             const testOdaiList = [
                 `「AIすぎる${kw}」にありがちな、人間味のありすぎるバグとは？`,
                 `100年後の${kw}に追加された、法に触れそうな新機能とは？`,
@@ -112,7 +118,7 @@
             ];
 
             const resultArea = document.getElementById('result-area');
-            resultArea.innerHTML = `<p style="border-left: 3px solid #E5E5E5; padding-left: 10px; margin-top:20px;"><strong>「${kw}」から閃いた厳選お題3選</strong></p>`;
+            resultArea.innerHTML = `<p style="border-left: 3px solid #E5E5E5; padding-left: 10px; margin-top:20px;"><strong>「${kw}」をキーワードにした厳選お題3選</strong></p>`;
             
             document.getElementById('copy-section').style.display = 'block';
             selectedAnswers = [];
@@ -149,7 +155,7 @@
             textArea.select();
             document.execCommand("copy");
             document.body.removeChild(textArea);
-            alert("コピーしました！");
+            alert("コピーしました！動画制作にご活用ください！");
         }
     </script>
 </body>
