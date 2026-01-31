@@ -12,15 +12,17 @@
         
         .primary-btn { background: linear-gradient(135deg, #E5E5E5 0%, #A0A0A0 100%); color: #001220; font-weight: bold; cursor: pointer; }
         .secondary-btn { background: #334b5e; color: #fff; cursor: pointer; font-size: 0.9rem; }
+        /* クリアボタン専用（少し控えめな赤系） */
+        .clear-btn { background: #4a2b2b; color: #ffcccc; cursor: pointer; font-size: 0.9rem; }
         
         .item { background: rgba(255,255,255,0.05); padding: 15px; margin: 8px 0; border-radius: 5px; cursor: pointer; border: 2px solid transparent; }
         .selected-red { border: 2px solid #FF0000 !important; background: rgba(255, 0, 0, 0.1) !important; }
         .section-title { border-left: 3px solid #E5E5E5; padding-left: 10px; margin-top: 25px; font-weight: bold; color: #fff; }
         
         #answer-setup-section, #copy-section { display: none; margin-top: 30px; border-top: 1px dashed #334b5e; padding-top: 20px; }
-        .flex-row { display: flex; gap: 10px; align-items: center; }
+        .flex-row { display: flex; gap: 8px; align-items: center; }
         .flex-row input { flex: 1; }
-        .flex-row button { width: auto; min-width: 100px; }
+        .flex-row button { width: auto; min-width: 80px; }
     </style>
 </head>
 <body>
@@ -38,6 +40,7 @@
         <label>お題を直接入力：</label>
         <div class="flex-row">
             <input type="text" id="manual-odai" placeholder="例：孫におじいちゃんがブチギレ。何があった？">
+            <button class="clear-btn" onclick="clearManual()">クリア</button>
             <button class="secondary-btn" onclick="confirmManual()">確定</button>
         </div>
 
@@ -64,37 +67,16 @@
     </div>
 
     <script>
-        // 大事な変数はグローバルに配置
         let selectedOdaiText = "";
         let selectedAnswers = [];
         const randomWords = ["孫", "AI", "無人島", "コンビニ", "タイムマシン", "入れ歯", "メルカリ", "宇宙飛行士", "給食", "透明人間"];
 
-        // 1. ランダム単語のセット
         function setRandomWord() {
             const word = randomWords[Math.floor(Math.random() * randomWords.length)];
             document.getElementById('keyword').value = word;
         }
 
-        // 2. AIお題生成
-        function generateAI() {
-            const kw = document.getElementById('keyword').value;
-            if (!kw) { alert("キーワードを入れてください"); return; }
-            
-            const testOdaiList = [
-                `「AIすぎる${kw}」にありがちな人間味のありすぎるバグとは？`,
-                `100年後の${kw}に追加された、法に触れそうな新機能とは？`,
-                `世界一やる気のない${kw}。持ち主をどう裏切る？`
-            ];
-
-            const area = document.getElementById('odai-result-area');
-            area.innerHTML = `<p class="section-title">「${kw}」の厳選お題3選</p>`;
-            
-            document.getElementById('answer-setup-section').style.display = 'none';
-            document.getElementById('copy-section').style.display = 'none';
-
-            testOdaiList.forEach((txt) => {
-                const div = document.createElement('div');
-                div.className = 'item';
-                div.innerText = txt;
-                div.onclick = function() {
-                    document.
+        // 追記：手動入力欄を空にする
+        function clearManual() {
+            document.getElementById('manual-odai').value = "";
+            document.getElementById('manual-odai').focus(); // すぐに入力できるようフォー
