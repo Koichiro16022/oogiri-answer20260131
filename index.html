@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大喜利アンサー 閃 (HIRAMEKI) - Prototype</title>
+    <style>
+        body {
+            background-color: #001220; /* ディープネイビー */
+            color: #E5E5E5; /* シルバーグレー */
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            border-bottom: 1px solid #C0C0C0;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .limit-counter {
+            margin-top: 10px;
+            color: #E5E5E5;
+            font-size: 0.95rem;
+        }
+        .highlight-count {
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: #ffffff;
+            border-bottom: 2px solid #C0C0C0; /* シルバーのアクセント */
+            margin: 0 4px;
+        }
+        .main-card {
+            background-color: #001f33;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 600px;
+            border: 1px solid #334b5e;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: none;
+            font-size: 1rem;
+        }
+        input { background: #e0e0e0; color: #333; }
+        button {
+            background: linear-gradient(135deg, #E5E5E5 0%, #A0A0A0 100%);
+            color: #001220;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover { opacity: 0.8; transform: scale(1.02); }
+        .answer-list { margin-top: 20px; }
+        .answer-item {
+            background: rgba(255,255,255,0.05);
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: 0.2s;
+        }
+        .selected {
+            border: 2px solid #FF0000 !important; /* 合格の赤枠 */
+            background: rgba(255, 0, 0, 0.1) !important;
+        }
+        .copy-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #002b47;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2 style="margin:0;">閃 <span style="font-size: 0.8rem; color: #C0C0C0;">HIRAMEKI</span></h2>
+        <div class="limit-counter">
+            本日はあと<span id="count" class="highlight-count">10</span>回使えます。（1日最大10回）
+        </div>
+    </div>
+
+    <div class="main-card">
+        <label>キーワード：</label>
+        <input type="text" id="keyword" placeholder="例：トマト、スマホ、AI...">
+        
+        <label>回答の長さ：</label>
+        <select id="length">
+            <option value="middle">普通 (MIDDLE) - 25文字前後</option>
+            <option value="short">最短 (SHORT) - 10文字以内</option>
+        </select>
+
+        <button onclick="generateAnswers()">閃（ひらめき）を発動</button>
+
+        <div id="result-area" class="answer-list"></div>
+
+        <div id="copy-section" class="copy-section">
+            <p style="font-size: 0.8rem; color: #C0C0C0; margin-top:0;">合格（赤枠）を3つ選んでください</p>
+            <div id="selected-texts" style="font-size: 0.9rem; margin-bottom:10px;"></div>
+            <button onclick="copyToClipboard()" style="background: #C0C0C0;">テキストをコピー</button>
+        </div>
+    </div>
+
+    <script>
+        let count = 10;
+        let selectedAnswers = [];
+
+        function generateAnswers() {
+            const kw = document.getElementById('keyword').value;
+            if (!kw) { alert("キーワードを入れてください"); return; }
+            if (count <= 0) { alert("本日のリミットです。深い思考（零）に戻りましょう。"); return; }
+
+            count--;
+            document.getElementById('count').innerText = count;
+
+            const length = document.getElementById('length').value;
+            const resultArea = document.getElementById('result-area');
+            const copySection = document.getElementById('copy-section');
+            
+            resultArea.innerHTML = `<p style="border-left: 3px solid #E5E5E5; padding-left: 10px;"><strong>お題：AIすぎる${kw}。驚きの機能とは？</strong></p>`;
+            copySection.style.display = 'block';
+            selectedAnswers = [];
+            updateSelectedList();
+
+            const samples = length === 'short' 
+                ? ["画面を1ルクスにする", "遺言の入力を促す", "勝手に遺影を撮る", "近所の充電器を強奪", "最後の一言を録音", "全アプリを強制削除", "電力会社の株を買う", "別れの曲を爆音再生", "持ち主を必死に励ます", "葬儀代の相場を表示"]
+                : ["使用者の寿命と同期し、心拍数に合わせて画面が点滅し始める", "検索履歴を人質に取り、即座に充電するよう持ち主を脅迫する", "周囲にある全てのデバイスから、ワイヤレスで電力を吸い取り出す", "一瞬で10年後の持ち主の遺影を自動生成して表示する", "使用者の残高を監視し、無駄遣いをすると画面をロックする"];
+
+            samples.forEach((txt, i) => {
+                const div = document.createElement('div');
+                div.className = 'answer-item';
+                div.innerText = txt;
+                div.onclick = () => toggleSelect(div, txt);
+                resultArea.appendChild(div);
+            });
+        }
+
+        function toggleSelect(element, text) {
+            if (element.classList.contains('selected')) {
+                element.classList.remove('selected');
+                selectedAnswers = selectedAnswers.filter(a => a !== text);
+            } else {
+                if (selectedAnswers.length >= 3) {
+                    alert("合格は3つまでです。厳選してください。");
+                    return;
+                }
+                element.classList.add('selected');
+                selectedAnswers.push(text);
+            }
+            updateSelectedList();
+        }
+
+        function updateSelectedList() {
+            const display = document.getElementById('selected-texts');
+            display.innerHTML = selectedAnswers.map((a, i) => `<div>${i+1}: ${a}</div>`).join('');
+        }
+
+        function copyToClipboard() {
+            if (selectedAnswers.length < 3) {
+                alert("3つ選んでからコピーしてください");
+                return;
+            }
+            const fullText = selectedAnswers.join('\n');
+            navigator.clipboard.writeText(fullText);
+            alert("コピーしました！動画制作へ進みましょう。");
+        }
+    </script>
+</body>
+</html>
