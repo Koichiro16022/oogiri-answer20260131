@@ -7,13 +7,15 @@
     <style>
         body { background-color: #001220; color: #E5E5E5; font-family: sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .main-card { background-color: #001f33; padding: 25px; border-radius: 10px; width: 100%; max-width: 600px; border: 1px solid #334b5e; }
-        input, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; font-size: 1rem; box-sizing: border-box; }
-        input { background: #e0e0e0; color: #333; }
+        input, select, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; font-size: 1rem; box-sizing: border-box; }
+        input, select { background: #e0e0e0; color: #333; }
         button { background: linear-gradient(135deg, #E5E5E5 0%, #A0A0A0 100%); color: #001220; font-weight: bold; cursor: pointer; }
-        .odai-item { background: rgba(255,255,255,0.05); padding: 15px; margin: 10px 0; border-radius: 5px; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
-        /* 選択されたお題の赤枠 */
+        .odai-item { background: rgba(255,255,255,0.05); padding: 15px; margin: 10px 0; border-radius: 5px; cursor: pointer; border: 2px solid transparent; }
         .selected-odai { border: 2px solid #FF0000 !important; background: rgba(255, 0, 0, 0.1); }
         .section-title { border-left: 3px solid #E5E5E5; padding-left: 10px; margin-top: 20px; font-weight: bold; }
+        
+        /* 回答セクション：最初は隠しておく */
+        #answer-setup-section { display: none; margin-top: 30px; border-top: 1px solid #334b5e; padding-top: 20px; }
     </style>
 </head>
 <body>
@@ -21,10 +23,23 @@
     <div class="main-card">
         <label>キーワード：</label>
         <input type="text" id="keyword" placeholder="例：戦い">
-        
         <button onclick="generateOdai()">大喜利のお題を生成</button>
 
         <div id="odai-result-area"></div>
+
+        <div id="answer-setup-section">
+            <label>回答のトーン：</label>
+            <select id="tone">
+                <option value="none" selected>選択なし</option>
+                <option value="intellectual">知的 (Intellectual)</option>
+                <option value="surreal">シュール (Surreal)</option>
+                <option value="black">ブラック (Black)</option>
+            </select>
+            
+            <button onclick="showAnswers()" style="background: linear-gradient(135deg, #ffffff 0%, #c0c0c0 100%);">回答を表示</button>
+            
+            <div id="answer-result-area"></div>
+        </div>
     </div>
 
     <script>
@@ -34,7 +49,6 @@
             const kw = document.getElementById('keyword').value;
             if (!kw) { alert("キーワードを入れてください"); return; }
             
-            // テスト用のお題3案
             const testOdaiList = [
                 `「AIすぎる${kw}」にありがちな、人間味のありすぎるバグとは？`,
                 `100年後の${kw}に追加された、法に触れそうな新機能とは？`,
@@ -44,21 +58,40 @@
             const area = document.getElementById('odai-result-area');
             area.innerHTML = `<p class="section-title">「${kw}」をキーワードにした厳選お題3選</p>`;
             
+            // 回答エリアをリセット
+            document.getElementById('answer-setup-section').style.display = 'none';
+            document.getElementById('answer-result-area').innerHTML = '';
+
             testOdaiList.forEach((txt) => {
                 const div = document.createElement('div');
                 div.className = 'odai-item';
                 div.innerText = txt;
                 div.onclick = function() {
-                    // 他の選択を解除して、クリックしたものだけを赤枠にする
                     document.querySelectorAll('.odai-item').forEach(el => el.classList.remove('selected-odai'));
                     this.classList.add('selected-odai');
                     selectedOdaiText = txt;
                     
-                    // 次のステップ（回答生成）に進むための合図を出す（今はまだ表示しません）
-                    console.log("選択されたお題:", selectedOdaiText);
+                    // お題が選ばれたらトーン選択とボタンを表示
+                    document.getElementById('answer-setup-section').style.display = 'block';
                 };
                 area.appendChild(div);
             });
+        }
+
+        function showAnswers() {
+            const tone = document.getElementById('tone').value;
+            const area = document.getElementById('answer-result-area');
+            
+            area.innerHTML = `<p class="section-title">回答 20案（トーン：${tone}）</p>`;
+            
+            // ここに20個の回答を表示するロジック（次のステップで詳細を詰めましょう）
+            for(let i=1; i<=20; i++) {
+                const div = document.createElement('div');
+                div.style.padding = "10px";
+                div.style.borderBottom = "1px solid #334b5e";
+                div.innerText = `回答案 ${i}: これはテスト用の回答テキストです。`;
+                area.appendChild(div);
+            }
         }
     </script>
 </body>
