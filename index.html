@@ -66,4 +66,111 @@
         .answer-list { margin-top: 20px; }
         .answer-item {
             background: rgba(255,255,255,0.05);
-            padding:
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: 0.2s;
+            font-size: 1.1rem; /* お題が少ないので少し大きくしました */
+            line-height: 1.5;
+        }
+        .selected {
+            border: 2px solid #FF0000 !important;
+            background: rgba(255, 0, 0, 0.2) !important;
+        }
+        .copy-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #002b47;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2 style="margin:0;">大喜利アンサー</h2>
+        <div class="limit-counter">
+            本日はあと<span id="count" class="highlight-count">10</span>回使えます。
+        </div>
+    </div>
+
+    <div class="main-card">
+        <label>キーワード：</label>
+        <input type="text" id="keyword" placeholder="例：トマト、スマホ、AI...">
+        
+        <label>お題のトーン：</label>
+        <select id="tone">
+            <option value="intellectual">知的 (Intellectual)</option>
+            <option value="surreal">シュール (Surreal)</option>
+            <option value="black">ブラック (Black)</option>
+        </select>
+
+        <button onclick="generateOdai()">大喜利のお題を生成</button>
+
+        <div id="result-area" class="answer-list"></div>
+
+        <div id="copy-section" class="copy-section">
+            <p style="font-size: 0.8rem; color: #C0C0C0; margin-top:0;">合格（赤枠）を選んでください</p>
+            <div id="selected-texts" style="font-size: 0.9rem; margin-bottom:10px;"></div>
+            <button onclick="copyToClipboard()" style="background: #C0C0C0;">テキストをコピー</button>
+        </div>
+    </div>
+
+    <script>
+        let count = 10;
+        let selectedAnswers = [];
+
+        function generateOdai() {
+            const kw = document.getElementById('keyword').value;
+            if (!kw) { alert("キーワードを入れてください"); return; }
+            
+            // お題を3つに厳選（テスト用）
+            const testOdaiList = [
+                `「AIすぎる${kw}」にありがちな、人間味のありすぎるバグとは？`,
+                `100年後の${kw}に追加された、法に触れそうな新機能とは？`,
+                `世界一やる気のない${kw}。持ち主をどう裏切る？`
+            ];
+
+            const resultArea = document.getElementById('result-area');
+            resultArea.innerHTML = `<p style="border-left: 3px solid #E5E5E5; padding-left: 10px;"><strong>「${kw}」から閃いた厳選お題3選</strong></p>`;
+            
+            document.getElementById('copy-section').style.display = 'block';
+            selectedAnswers = [];
+            updateSelectedList();
+
+            testOdaiList.forEach((txt) => {
+                const div = document.createElement('div');
+                div.className = 'answer-item';
+                div.innerText = txt;
+                div.onclick = () => toggleSelect(div, txt);
+                resultArea.appendChild(div);
+            });
+        }
+
+        function toggleSelect(element, text) {
+            if (element.classList.contains('selected')) {
+                element.classList.remove('selected');
+                selectedAnswers = selectedAnswers.filter(a => a !== text);
+            } else {
+                element.classList.add('selected');
+                selectedAnswers.push(text);
+            }
+            updateSelectedList();
+        }
+
+        function updateSelectedList() {
+            const display = document.getElementById('selected-texts');
+            display.innerHTML = selectedAnswers.map((a, i) => `<div>${i+1}: ${a}</div>`).join('');
+        }
+
+        function copyToClipboard() {
+            if (selectedAnswers.length === 0) { alert("お題を選んでください"); return; }
+            navigator.clipboard.writeText(selectedAnswers.join('\n'));
+            alert("コピーしました！");
+        }
+    </script>
+</body>
+</html>
