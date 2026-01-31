@@ -65,3 +65,60 @@
             area.innerHTML = `<p class="section-title">「${kw}」をキーワードにした厳選お題3選</p>`;
             
             document.getElementById('answer-setup-section').style.display = 'none';
+            document.getElementById('copy-section').style.display = 'none';
+            selectedAnswers = [];
+
+            testOdaiList.forEach((txt) => {
+                const div = document.createElement('div');
+                div.className = 'item';
+                div.innerText = txt;
+                div.onclick = function() {
+                    const items = document.querySelectorAll('#odai-result-area .item');
+                    items.forEach(el => el.classList.remove('selected-red'));
+                    this.classList.add('selected-red');
+                    selectedOdaiText = txt;
+                    document.getElementById('answer-setup-section').style.display = 'block';
+                };
+                area.appendChild(div);
+            });
+        }
+
+        function showAnswers() {
+            const area = document.getElementById('answer-result-area');
+            const type = document.getElementById('tone').options[document.getElementById('tone').selectedIndex].text;
+            area.innerHTML = `<p class="section-title">回答 20案（${type}）</p>`;
+            selectedAnswers = [];
+
+            for(let i=1; i<=20; i++) {
+                const ansText = `[${type}] 回答案 ${i}: ${selectedOdaiText.substring(0,5)}...に対するボケです。`;
+                const div = document.createElement('div');
+                div.className = 'item';
+                div.innerText = ansText;
+                
+                div.onclick = function() {
+                    if (this.classList.contains('selected-red')) {
+                        this.classList.remove('selected-red');
+                        selectedAnswers = selectedAnswers.filter(a => a !== ansText);
+                    } else {
+                        this.classList.add('selected-red');
+                        selectedAnswers.push(ansText);
+                    }
+                    document.getElementById('copy-section').style.display = selectedAnswers.length > 0 ? 'block' : 'none';
+                };
+                area.appendChild(div);
+            }
+        }
+
+        function copyToClipboard() {
+            if (selectedAnswers.length === 0) return;
+            const textArea = document.createElement("textarea");
+            textArea.value = selectedAnswers.join('\n');
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            alert("コピーしました！");
+        }
+    </script>
+</body>
+</html>
