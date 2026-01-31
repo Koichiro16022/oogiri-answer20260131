@@ -6,8 +6,8 @@
     <title>大喜利アンサー - Prototype</title>
     <style>
         body {
-            background-color: #001220; /* ディープネイビー */
-            color: #E5E5E5; /* シルバーグレー */
+            background-color: #001220;
+            color: #E5E5E5;
             font-family: 'Helvetica Neue', Arial, sans-serif;
             margin: 0;
             padding: 20px;
@@ -76,7 +76,7 @@
             line-height: 1.4;
         }
         .selected {
-            border: 2px solid #FF0000 !important; /* 合格の赤枠 */
+            border: 2px solid #FF0000 !important;
             background: rgba(255, 0, 0, 0.1) !important;
         }
         .copy-section {
@@ -93,7 +93,7 @@
     <div class="header">
         <h2 style="margin:0;">大喜利アンサー</h2>
         <div class="limit-counter">
-            本日はあと<span id="count" class="highlight-count">10</span>回使えます。（1日最大10回）
+            本日はあと<span id="count" class="highlight-count">10</span>回使えます。
         </div>
     </div>
 
@@ -103,8 +103,8 @@
         
         <label>回答の長さ：</label>
         <select id="length">
-            <option value="middle">普通 (MIDDLE) - 25文字前後</option>
-            <option value="short">最短 (SHORT) - 10文字以内</option>
+            <option value="middle">普通 (MIDDLE)</option>
+            <option value="short">最短 (SHORT)</option>
         </select>
 
         <button onclick="generateOdai()">大喜利のお題を生成</button>
@@ -122,12 +122,10 @@
         let count = 10;
         let selectedAnswers = [];
 
-        // テスト用のお題生成関数（現在はAPIなしで動作確認用）
         function generateOdai() {
             const kw = document.getElementById('keyword').value;
             if (!kw) { alert("キーワードを入れてください"); return; }
             
-            // API制限中でも表示確認ができるダミーお題
             const testOdaiList = [
                 `「AIすぎる${kw}」にありがちなこととは？`,
                 `この${kw}、絶対に中に人間が入ってるな。なぜそう思った？`,
@@ -144,8 +142,7 @@
             const resultArea = document.getElementById('result-area');
             resultArea.innerHTML = `<p style="border-left: 3px solid #E5E5E5; padding-left: 10px;"><strong>キーワード「${kw}」から着想したお題候補</strong></p>`;
             
-            const copySection = document.getElementById('copy-section');
-            copySection.style.display = 'block';
+            document.getElementById('copy-section').style.display = 'block';
             selectedAnswers = [];
             updateSelectedList();
 
@@ -164,7 +161,7 @@
                 selectedAnswers = selectedAnswers.filter(a => a !== text);
             } else {
                 if (selectedAnswers.length >= 3) {
-                    alert("合格は3つまでです。厳選してください。");
+                    alert("合格は3つまでです。");
                     return;
                 }
                 element.classList.add('selected');
@@ -179,12 +176,8 @@
         }
 
         function copyToClipboard() {
-            if (selectedAnswers.length < 3) {
-                alert("3つ選んでからコピーしてください");
-                return;
-            }
-            const fullText = selectedAnswers.join('\n');
-            navigator.clipboard.writeText(fullText);
+            if (selectedAnswers.length < 3) { alert("3つ選んでください"); return; }
+            navigator.clipboard.writeText(selectedAnswers.join('\n'));
             alert("コピーしました！");
         }
     </script>
