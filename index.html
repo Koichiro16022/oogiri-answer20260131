@@ -1,41 +1,192 @@
-<script>
-    let count = 10;
-    let selectedAnswers = [];
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大喜利アンサー - Prototype</title>
+    <style>
+        body {
+            background-color: #001220; /* ディープネイビー */
+            color: #E5E5E5; /* シルバーグレー */
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            border-bottom: 1px solid #C0C0C0;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .limit-counter {
+            margin-top: 10px;
+            color: #E5E5E5;
+            font-size: 0.95rem;
+        }
+        .highlight-count {
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: #ffffff;
+            border-bottom: 2px solid #C0C0C0;
+            margin: 0 4px;
+        }
+        .main-card {
+            background-color: #001f33;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 600px;
+            border: 1px solid #334b5e;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: none;
+            font-size: 1rem;
+        }
+        input { background: #e0e0e0; color: #333; }
+        button {
+            background: linear-gradient(135deg, #E5E5E5 0%, #A0A0A0 100%);
+            color: #001220;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover { opacity: 0.8; transform: scale(1.02); }
+        .answer-list { margin-top: 20px; }
+        .answer-item {
+            background: rgba(255,255,255,0.05);
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: 0.2s;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        .selected {
+            border: 2px solid #FF0000 !important; /* 合格の赤枠 */
+            background: rgba(255, 0, 0, 0.1) !important;
+        }
+        .copy-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #002b47;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
 
-    function generateAnswers() {
-        const kw = document.getElementById('keyword').value;
-        if (!kw) { alert("キーワードを入れてください"); return; }
+    <div class="header">
+        <h2 style="margin:0;">大喜利アンサー</h2>
+        <div class="limit-counter">
+            本日はあと<span id="count" class="highlight-count">10</span>回使えます。（1日最大10回）
+        </div>
+    </div>
+
+    <div class="main-card">
+        <label>キーワード：</label>
+        <input type="text" id="keyword" placeholder="例：トマト、スマホ、AI...">
         
-        // テスト用のダミーデータ（APIを使わないので無料・無制限）
-        const testAnswers = [
-            "24時間体制で持ち主の愚痴を聞き続ける",
-            "充電が切れる間際に、悲しげな別れの歌を歌う",
-            "持ち主の顔色を見て、勝手に会社に欠勤届を出す",
-            "美味しいトマト料理のレシピを、ホログラムで投影する",
-            "暗闇で目が合うと、優しくウインクしてくる",
-            "SNSの炎上を察知し、物理的にスマホをロックする",
-            "持ち主の好みのタイプを学習し、街中で勝手にナンパする",
-            "残高が減ると、自動的に近所のバイト情報を検索する",
-            "寝坊した際、枕元でバケツ一杯の水を出す（仮想）",
-            "10年後の持ち主の姿を、毎日更新して表示する"
-        ];
+        <label>回答の長さ：</label>
+        <select id="length">
+            <option value="middle">普通 (MIDDLE) - 25文字前後</option>
+            <option value="short">最短 (SHORT) - 10文字以内</option>
+        </select>
 
-        const resultArea = document.getElementById('result-area');
-        resultArea.innerHTML = `<p style="border-left: 3px solid #E5E5E5; padding-left: 10px;"><strong>お題：AIすぎる${kw}。驚きの機能とは？</strong></p>`;
-        
-        const copySection = document.getElementById('copy-section');
-        copySection.style.display = 'block';
-        selectedAnswers = [];
-        updateSelectedList();
+        <button onclick="generateOdai()">大喜利のお題を生成</button>
 
-        testAnswers.forEach((txt) => {
-            const div = document.createElement('div');
-            div.className = 'answer-item';
-            div.innerText = txt;
-            div.onclick = () => toggleSelect(div, txt);
-            resultArea.appendChild(div);
-        });
-    }
+        <div id="result-area" class="answer-list"></div>
 
-    // （toggleSelect, updateSelectedList, copyToClipboard はそのまま）
-</script>
+        <div id="copy-section" class="copy-section">
+            <p style="font-size: 0.8rem; color: #C0C0C0; margin-top:0;">合格（赤枠）を3つ選んでください</p>
+            <div id="selected-texts" style="font-size: 0.9rem; margin-bottom:10px;"></div>
+            <button onclick="copyToClipboard()" style="background: #C0C0C0;">テキストをコピー</button>
+        </div>
+    </div>
+
+    <script>
+        let count = 10;
+        let selectedAnswers = [];
+
+        // テスト用のお題生成関数（現在はAPIなしで動作確認用）
+        function generateOdai() {
+            const kw = document.getElementById('keyword').value;
+            if (!kw) { alert("キーワードを入れてください"); return; }
+            
+            // API制限中でも表示確認ができるダミーお題
+            const testOdaiList = [
+                `「AIすぎる${kw}」にありがちなこととは？`,
+                `この${kw}、絶対に中に人間が入ってるな。なぜそう思った？`,
+                `100年後の${kw}に追加された、余計すぎる新機能とは？`,
+                `世界一やる気のない${kw}。どんなの？`,
+                `${kw}がまさかの喋り出した！第一声は何？`,
+                `「あ、この${kw}、前世は人間だったんだな」と確信させた行動は？`,
+                `絶対にバズらない${kw}のキャッチコピーを教えてください。`,
+                `もしも${kw}が総理大臣になったら、最初に行う政策は？`,
+                `高級車1台分もする「究極の${kw}」。何が違う？`,
+                `夜中の12時を過ぎると、この${kw}はどう変わる？`
+            ];
+
+            const resultArea = document.getElementById('result-area');
+            resultArea.innerHTML = `<p style="border-left: 3px solid #E5E5E5; padding-left: 10px;"><strong>キーワード「${kw}」から着想したお題候補</strong></p>`;
+            
+            const copySection = document.getElementById('copy-section');
+            copySection.style.display = 'block';
+            selectedAnswers = [];
+            updateSelectedList();
+
+            testOdaiList.forEach((txt) => {
+                const div = document.createElement('div');
+                div.className = 'answer-item';
+                div.innerText = txt;
+                div.onclick = () => toggleSelect(div, txt);
+                resultArea.appendChild(div);
+            });
+        }
+
+        function toggleSelect(element, text) {
+            if (element.classList.contains('selected')) {
+                element.classList.remove('selected');
+                selectedAnswers = selectedAnswers.filter(a => a !== text);
+            } else {
+                if (selectedAnswers.length >= 3) {
+                    alert("合格は3つまでです。厳選してください。");
+                    return;
+                }
+                element.classList.add('selected');
+                selectedAnswers.push(text);
+            }
+            updateSelectedList();
+        }
+
+        function updateSelectedList() {
+            const display = document.getElementById('selected-texts');
+            display.innerHTML = selectedAnswers.map((a, i) => `<div>${i+1}: ${a}</div>`).join('');
+        }
+
+        function copyToClipboard() {
+            if (selectedAnswers.length < 3) {
+                alert("3つ選んでからコピーしてください");
+                return;
+            }
+            const fullText = selectedAnswers.join('\n');
+            navigator.clipboard.writeText(fullText);
+            alert("コピーしました！");
+        }
+    </script>
+</body>
+</html>
