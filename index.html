@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>大喜利アンサー 閃 (HIRAMEKI) - Prototype</title>
+    <title>大喜利アンサー - Prototype</title>
     <style>
         body {
             background-color: #001220; /* ディープネイビー */
@@ -34,7 +34,7 @@
             font-weight: bold;
             font-size: 1.2rem;
             color: #ffffff;
-            border-bottom: 2px solid #C0C0C0; /* シルバーのアクセント */
+            border-bottom: 2px solid #C0C0C0;
             margin: 0 4px;
         }
         .main-card {
@@ -89,7 +89,7 @@
 <body>
 
     <div class="header">
-        <h2 style="margin:0;">閃 <span style="font-size: 0.8rem; color: #C0C0C0;">HIRAMEKI</span></h2>
+        <h2 style="margin:0;">大喜利アンサー</h2>
         <div class="limit-counter">
             本日はあと<span id="count" class="highlight-count">10</span>回使えます。（1日最大10回）
         </div>
@@ -105,7 +105,7 @@
             <option value="short">最短 (SHORT) - 10文字以内</option>
         </select>
 
-        <button onclick="generateAnswers()">閃（ひらめき）を発動</button>
+        <button onclick="generateAnswers()">大喜利の回答を生成</button>
 
         <div id="result-area" class="answer-list"></div>
 
@@ -120,34 +120,58 @@
         let count = 10;
         let selectedAnswers = [];
 
-        function generateAnswers() {
+        async function generateAnswers() {
             const kw = document.getElementById('keyword').value;
+            // ★ここにエクセルツールで使っているAPIキーを貼り付けてください
+            const apiKey = "AIzaSyAIzt32zYkMeal2NxHhPwLkCv2YBNYO4Mo"; 
+            
             if (!kw) { alert("キーワードを入れてください"); return; }
+            if (apiKey === "ここにあなたのAPIキーを貼り付け") { alert("APIキーが設定されていません"); return; }
             if (count <= 0) { alert("本日のリミットです。深い思考（零）に戻りましょう。"); return; }
 
-            count--;
-            document.getElementById('count').innerText = count;
-
-            const length = document.getElementById('length').value;
             const resultArea = document.getElementById('result-area');
-            const copySection = document.getElementById('copy-section');
-            
-            resultArea.innerHTML = `<p style="border-left: 3px solid #E5E5E5; padding-left: 10px;"><strong>お題：AIすぎる${kw}。驚きの機能とは？</strong></p>`;
-            copySection.style.display = 'block';
-            selectedAnswers = [];
-            updateSelectedList();
+            resultArea.innerHTML = "<p>思考中...（最高の『閃き』を生成しています）</p>";
 
-            const samples = length === 'short' 
-                ? ["画面を1ルクスにする", "遺言の入力を促す", "勝手に遺影を撮る", "近所の充電器を強奪", "最後の一言を録音", "全アプリを強制削除", "電力会社の株を買う", "別れの曲を爆音再生", "持ち主を必死に励ます", "葬儀代の相場を表示"]
-                : ["使用者の寿命と同期し、心拍数に合わせて画面が点滅し始める", "検索履歴を人質に取り、即座に充電するよう持ち主を脅迫する", "周囲にある全てのデバイスから、ワイヤレスで電力を吸い取り出す", "一瞬で10年後の持ち主の遺影を自動生成して表示する", "使用者の残高を監視し、無駄遣いをすると画面をロックする"];
+            const lengthRule = document.getElementById('length').value === 'short' ? '10文字以内' : '25文字前後';
+            const prompt = `キーワード「${kw}」を使って、最高に面白いお題を1つ作り、それに対する回答を20個出してください。
+            条件：
+            - 回答の属性は「知的」「シュール」「ブラック」をバランスよく混ぜること。
+            - 回答の長さは${lengthRule}。
+            - 出力は回答のテキストのみを20行で。お題は最初に1行だけ書いてください。`;
 
-            samples.forEach((txt, i) => {
-                const div = document.createElement('div');
-                div.className = 'answer-item';
-                div.innerText = txt;
-                div.onclick = () => toggleSelect(div, txt);
-                resultArea.appendChild(div);
-            });
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                
+                const data = await response.json();
+                const aiText = data.candidates[0].content.parts[0].text;
+                const lines = aiText.split('\n').filter(t => t.trim() !== "");
+                
+                const odai = lines[0];
+                const answers = lines.slice(1);
+
+                count--;
+                document.getElementById('count').innerText = count;
+
+                resultArea.innerHTML = `<p style="border-left: 3px solid #E5E5E5; padding-left: 10px;"><strong>${odai}</strong></p>`;
+                document.getElementById('copy-section').style.display = 'block';
+                selectedAnswers = [];
+                updateSelectedList();
+
+                answers.forEach((txt) => {
+                    const div = document.createElement('div');
+                    div.className = 'answer-item';
+                    div.innerText = txt.replace(/^\d+\.\s*/, ''); // 行頭の数字を消す
+                    div.onclick = () => toggleSelect(div, div.innerText);
+                    resultArea.appendChild(div);
+                });
+            } catch (e) {
+                resultArea.innerHTML = "<p>エラーが発生しました。APIキーを確認してください。</p>";
+                console.error(e);
+            }
         }
 
         function toggleSelect(element, text) {
