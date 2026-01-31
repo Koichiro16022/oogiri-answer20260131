@@ -9,11 +9,10 @@
         .main-card { background-color: #001f33; padding: 25px; border-radius: 10px; width: 100%; max-width: 600px; border: 1px solid #334b5e; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         input, select, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; font-size: 1rem; box-sizing: border-box; }
         input, select { background: #e0e0e0; color: #333; }
-        button { background: linear-gradient(135deg, #E5E5E5 0%, #A0A0A0 100%); color: #001220; font-weight: bold; cursor: pointer; }
-        
-        .item { background: rgba(255,255,255,0.05); padding: 15px; margin: 8px 0; border-radius: 5px; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
+        button { background: linear-gradient(135deg, #E5E5E5 0%, #A0A0A0 100%); color: #001220; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { opacity: 0.8; }
+        .item { background: rgba(255,255,255,0.05); padding: 15px; margin: 8px 0; border-radius: 5px; cursor: pointer; border: 2px solid transparent; }
         .selected-red { border: 2px solid #FF0000 !important; background: rgba(255, 0, 0, 0.1) !important; }
-        
         .section-title { border-left: 3px solid #E5E5E5; padding-left: 10px; margin-top: 25px; font-weight: bold; color: #fff; }
         #answer-setup-section, #copy-section { display: none; margin-top: 30px; border-top: 1px dashed #334b5e; padding-top: 20px; }
     </style>
@@ -23,7 +22,7 @@
     <div class="main-card">
         <label>キーワード：</label>
         <input type="text" id="keyword" placeholder="例：戦い">
-        <button onclick="generateOdai()">大喜利のお題を生成</button>
+        <button id="gen-odai-btn">大喜利のお題を生成</button>
 
         <div id="odai-result-area"></div>
 
@@ -36,14 +35,14 @@
                 <option value="black">ブラック (Black)</option>
             </select>
             
-            <button onclick="showAnswers()" style="background: linear-gradient(135deg, #ffffff 0%, #c0c0c0 100%);">回答を表示</button>
+            <button id="show-ans-btn" style="background: linear-gradient(135deg, #ffffff 0%, #c0c0c0 100%);">回答を表示</button>
             
             <div id="answer-result-area"></div>
         </div>
 
         <div id="copy-section">
             <p style="font-size: 0.8rem; color: #C0C0C0;">合格（赤枠）をコピーします</p>
-            <button onclick="copyToClipboard()" style="background: #C0C0C0;">選択した回答をコピー</button>
+            <button id="copy-btn" style="background: #C0C0C0;">選択した回答をコピー</button>
         </div>
     </div>
 
@@ -51,7 +50,8 @@
         let selectedOdaiText = "";
         let selectedAnswers = [];
 
-        function generateOdai() {
+        // お題生成
+        document.getElementById('gen-odai-btn').addEventListener('click', function() {
             const kw = document.getElementById('keyword').value;
             if (!kw) { alert("キーワードを入れてください"); return; }
             
@@ -73,17 +73,17 @@
                 div.className = 'item';
                 div.innerText = txt;
                 div.onclick = function() {
-                    const items = document.querySelectorAll('#odai-result-area .item');
-                    items.forEach(el => el.classList.remove('selected-red'));
+                    document.querySelectorAll('#odai-result-area .item').forEach(el => el.classList.remove('selected-red'));
                     this.classList.add('selected-red');
                     selectedOdaiText = txt;
                     document.getElementById('answer-setup-section').style.display = 'block';
                 };
                 area.appendChild(div);
             });
-        }
+        });
 
-        function showAnswers() {
+        // 回答表示
+        document.getElementById('show-ans-btn').addEventListener('click', function() {
             const area = document.getElementById('answer-result-area');
             const type = document.getElementById('tone').options[document.getElementById('tone').selectedIndex].text;
             area.innerHTML = `<p class="section-title">回答 20案（${type}）</p>`;
@@ -107,18 +107,13 @@
                 };
                 area.appendChild(div);
             }
-        }
+        });
 
-        function copyToClipboard() {
+        // コピー機能
+        document.getElementById('copy-btn').addEventListener('click', function() {
             if (selectedAnswers.length === 0) return;
             const textArea = document.createElement("textarea");
             textArea.value = selectedAnswers.join('\n');
             document.body.appendChild(textArea);
             textArea.select();
-            document.execCommand("copy");
-            document.body.removeChild(textArea);
-            alert("コピーしました！");
-        }
-    </script>
-</body>
-</html>
+            document.exec
