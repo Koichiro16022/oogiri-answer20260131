@@ -8,7 +8,7 @@ if "GEMINI_API_KEY" in st.secrets:
 else:
     st.error("APIキーがSecretsに設定されていません。")
 
-# デザイン設定（CSS）
+# デザイン設定
 st.markdown("""
     <style>
     .main { background-color: #001220; color: #E5E5E5; }
@@ -20,7 +20,6 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# ① タイトルを「大喜利アンサー」のみに修正
 st.title("大喜利アンサー")
 
 # --- 状態管理 ---
@@ -35,7 +34,7 @@ if 'answers' not in st.session_state:
 
 # --- 1. キーワードセクション ---
 st.subheader("キーワードを入力してください")
-col1, col2, col3 = st.columns([5, 1.5, 1.5]) # 比率を少し調整
+col1, col2, col3 = st.columns([5, 1.5, 1.5])
 with col1:
     kw = st.text_input("キーワード", value=st.session_state.random_word, label_visibility="collapsed")
 with col2:
@@ -43,22 +42,36 @@ with col2:
         st.session_state.random_word = ""
         st.rerun()
 with col3:
-    # ② ボタンの表示を「ランダム」に修正
     if st.button("ランダム"):
         words = ["孫", "AI", "無人島", "コンビニ", "タイムマシン", "入れ歯", "メルカリ", "宇宙飛行士", "給食", "透明人間"]
         st.session_state.random_word = random.choice(words)
         st.rerun()
 
+# モデルの定義（最新の安定版を指定）
+MODEL_NAME = 'gemini-1.5-flash-latest'
+
 if st.button("お題をAI生成", use_container_width=True):
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel(MODEL_NAME)
         prompt = f"「{kw}」をキーワードにして、大喜利のお題を3つ、箇条書きの記号なしで、改行のみで出力してください。IPPONグランプリのようなテイストでお願いします。"
         response = model.generate_content(prompt)
-        lines = response.text.replace('*', '').replace('-', '').strip().split('\n')
+        # response.text が直接取得できない場合を考慮
+        text = response.text if response.text else ""
+        lines = text.replace('*', '').replace('-', '').strip().split('\n')
         st.session_state.odai_list = [l.strip() for l in lines if l.strip()]
         st.rerun()
     except Exception as e:
         st.error(f"お題生成エラー: {e}")
+        st.info("モデル名を 'gemini-pro' に切り替えて試行します...")
+        # フォールバック（予備）の試行
+        try:
+            model = genai.GenerativeModel('gemini-pro')
+            response = model.generate_content(prompt)
+            lines = response.text.replace('*', '').replace('-', '').strip().split('\n')
+            st.session_state.odai_list = [l.strip() for l in lines if l.strip()]
+            st.rerun()
+        except Exception as e2:
+            st.error(f"再試行エラー: {e2}")
 
 # --- お題選択エリア ---
 if st.session_state.odai_list:
@@ -84,25 +97,12 @@ if st.session_state.selected_odai:
     
     if st.button("回答を20案表示", type="primary"):
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel(MODEL_NAME)
             prompt = f"お題：{st.session_state.selected_odai}\n雰囲気：{tone}\nこのお題に対して、爆笑を生む回答を20案、番号や記号なしで、改行のみで出力してください。"
             response = model.generate_content(prompt)
-            lines = response.text.replace('*', '').replace('-', '').strip().split('\n')
+            text = response.text if response.text else ""
+            lines = text.replace('*', '').replace('-', '').strip().split('\n')
             st.session_state.answers = [l.strip() for l in lines if l.strip()]
             st.rerun()
         except Exception as e:
             st.error(f"回答生成エラー: {e}")
-
-# --- 4. 結果表示 ---
-if st.session_state.answers:
-    st.write("### 回答一覧（YouTubeショート用）")
-    selected = []
-    # 常に20案表示するようにスライスを調整
-    for i, ans in enumerate(st.session_state.answers[:20]):
-        if st.checkbox(ans, key=f"ans_{i}"):
-            selected.append(ans)
-    
-    if selected:
-        st.write("---")
-        st.write("### 選択した回答をコピー")
-        st.text_area("コピー用", value="\n".join(selected), height=150)
