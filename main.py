@@ -1,6 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import random
+import time
 
 # --- 設定・API準備 ---
 if "GEMINI_API_KEY" in st.secrets:
@@ -8,8 +9,19 @@ if "GEMINI_API_KEY" in st.secrets:
 else:
     st.error("APIキーがSecretsに設定されていません。")
 
-# モデルの固定（安定と速度重視）
-CHOSEN_MODEL = 'models/gemini-2.0-flash'
+# 安定版モデルを指定
+CHOSEN_MODEL = 'models/gemini-1.5-flash-latest'
+
+# API呼び出し関数（エラー対策リトライ付き）
+def call_gemini_with_retry(model, prompt, max_retries=3):
+    for i in range(max_retries):
+        try:
+            return model.generate_content(prompt)
+        except Exception as e:
+            if "429" in str(e) and i < max_retries - 1:
+                time.sleep(2 * (i + 1))
+                continue
+            raise e
 
 # デザイン設定
 st.markdown("""
@@ -22,7 +34,7 @@ st.markdown("""
 
 st.title("大喜利アンサー")
 
-# --- 状態管理（ここが重要！） ---
+# --- 状態管理 ---
 if 'kw' not in st.session_state: st.session_state.kw = "孫"
 if 'odais' not in st.session_state: st.session_state.odais = []
 if 'selected_odai' not in st.session_state: st.session_state.selected_odai = ""
@@ -39,26 +51,28 @@ with col2:
         st.rerun()
 with col3:
     if st.button("ランダム"):
-        st.session_state.kw = random.choice(["孫", "AI", "無人島", "コンビニ", "タイムマシン", "給食"])
+        st.session_state.kw = random.choice(["孫", "AI", "無人島", "コンビニ", "タイムマシン", "入れ歯", "メルカリ", "宇宙飛行士", "給食"])
         st.rerun()
 
 if st.button("お題をAI生成", use_container_width=True):
-    with st.spinner("思考中..."):
-        model = genai.GenerativeModel(CHOSEN_MODEL)
-        prompt = f"「{st.session_state.kw}」でIPPONグランプリ風の大喜利お題を3つ、記号なし改行区切りで出して。"
-        res = model.generate_content(prompt)
-        st.session_state.odais = [l.strip() for l in res.text.replace('*','').split('\n') if l.strip()]
-        st.rerun()
+    with st.spinner("AIが思考中..."):
+        try:
+            model = genai.GenerativeModel(CHOSEN_MODEL)
+            prompt = f"「{st.session_state.kw}」でIPPONグランプリ風の大喜利お題を3つ、記号なし改行区切りで出力してください。"
+            res = call_gemini_with_retry(model, prompt)
+            st.session_state.odais = [l.strip() for l in res.text.replace('*','').replace('-','').split('\n') if l.strip()]
+            st.rerun()
+        except Exception as e:
+            st.error(f"エラーが発生しました: {e}")
 
-# --- 2. お題選択（ボタンが確実に効くように修正） ---
+# --- 2. お題選択 ---
 if st.session_state.odais:
     st.write("---")
     st.write("### お題を選択してください")
     for i, odai in enumerate(st.session_state.odais):
-        # ボタンを押した時に selected_odai を即座に更新
         if st.button(odai, key=f"odai_{i}"):
             st.session_state.selected_odai = odai
-            st.session_state.ans_list = [] # お題を変えたら回答はリセット
+            st.session_state.ans_list = [] # お題変更で回答リセット
 
 # --- 3. 回答生成 ---
 if st.session_state.selected_odai:
@@ -67,16 +81,20 @@ if st.session_state.selected_odai:
     tone = st.selectbox("ユーモアの種類", ["通常", "知的", "シュール", "ブラック"])
     
     if st.button("回答を20案表示", type="primary"):
-        with st.spinner("爆速回答中..."):
-            model = genai.GenerativeModel(CHOSEN_MODEL)
-            prompt = f"お題：{st.session_state.selected_odai}\n雰囲気：{tone}\n回答を20案、番号なし改行区切りで出力。"
-            res = model.generate_content(prompt)
-            st.session_state.ans_list = [l.strip() for l in res.text.replace('*','').split('\n') if l.strip()]
-            st.rerun()
+        with st.spinner("20案を爆速生成中..."):
+            try:
+                model = genai.GenerativeModel(CHOSEN_MODEL)
+                prompt = f"お題：{st.session_state.selected_odai}\n雰囲気：{tone}\n爆笑を生む回答を20案、番号や記号なしで改行区切りで出力してください。"
+                res = call_gemini_with_retry(model, prompt)
+                st.session_state.ans_list = [l.strip() for l in res.text.replace('*','').replace('-','').split('\n') if l.strip()]
+                st.rerun()
+            except Exception as e:
+                st.error(f"回答生成エラー: {e}")
 
 # --- 4. 結果表示 ---
 if st.session_state.ans_list:
-    st.write("### 回答一覧（選択してコピー）")
+    st.write("### 回答一覧（YouTubeショート用）")
     sel = [ans for i, ans in enumerate(st.session_state.ans_list[:20]) if st.checkbox(ans, key=f"a_{i}")]
     if sel:
+        st.write("---")
         st.text_area("コピー用", value="\n".join(sel), height=150)
