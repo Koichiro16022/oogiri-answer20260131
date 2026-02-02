@@ -76,4 +76,54 @@ def create_geki_video(odai, answer):
         clip3 = ImageClip(np.array(img3)).set_start(8.6).set_end(13.8).set_duration(5.2)
 
         # 音声生成
-        full_text = f"{odai}
+        full_text = f"{odai}。、、{clean_text}" 
+        tts = gTTS(full_text, lang='ja')
+        tts.save("temp_voice.mp3")
+        audio = AudioFileClip("temp_voice.mp3").set_start(1.2)
+
+        # 合成
+        final = CompositeVideoClip([video, clip1, clip2, clip3])
+        final = final.set_audio(audio) 
+
+        output_fn = "geki_output.mp4"
+        final.write_videofile(output_fn, fps=24, codec="libx264", audio_codec="aac")
+        return output_fn
+    except Exception as e:
+        st.error(f"合成エラー: {e}")
+        return None
+
+# --- 4. ブラウザUI ---
+st.subheader("キーワードを入力してください")
+col1, col2, col3 = st.columns([5, 1.5, 1.5])
+with col1:
+    st.session_state.kw = st.text_input("キーワード", value=st.session_state.kw, label_visibility="collapsed")
+with col2:
+    if st.button("消去"):
+        st.session_state.kw = ""; st.rerun()
+with col3:
+    if st.button("ランダム"):
+        words = ["AI", "孫", "無人島", "コンビニ", "タイムマシン", "サウナ", "キャンプ", "SNS"]
+        st.session_state.kw = random.choice(words); st.rerun()
+
+if st.button("お題をAI生成", use_container_width=True):
+    with st.spinner("閃き中..."):
+        model = genai.GenerativeModel(CHOSEN_MODEL)
+        res = model.generate_content(f"「{st.session_state.kw}」の大喜利お題3つ。改行のみ出力。")
+        st.session_state.odais = [l.strip() for l in res.text.split('\n') if l.strip()][:3]
+        st.rerun()
+
+if st.session_state.odais:
+    st.write("---")
+    for i, odai in enumerate(st.session_state.odais):
+        if st.button(odai, key=f"odai_{i}"):
+            st.session_state.selected_odai = odai
+            st.session_state.ans_list = []; st.rerun()
+
+if st.session_state.selected_odai:
+    st.write("---")
+    st.session_state.selected_odai = st.text_input("お題を修正・確定してください", value=st.session_state.selected_odai)
+    
+    if st.button("回答を20案表示", type="primary"):
+        with st.spinner("20案生成中..."):
+            model = genai.GenerativeModel(CHOSEN_MODEL)
+            prompt = f"お題：{st.session_state.selected_odai}\n
