@@ -74,7 +74,9 @@ def create_geki_video(odai, answer):
         clip3 = ImageClip(np.array(img3)).set_start(8.6).set_end(13.8).set_duration(5.2)
 
         # 音声生成
-        full_text = f"{odai}。、、{answer}" # 間に読点をいれて間隔を調整
+        # 音声生成（回答の先頭にある「1. 」などの数字を掃除する）
+        clean_answer = re.sub(r'^[0-9０-９\.\s、。・]+', '', answer)
+        full_text = f"{odai}。、、{clean_answer}" 
         tts = gTTS(full_text, lang='ja')
         tts.save("temp_voice.mp3")
         audio = AudioFileClip("temp_voice.mp3").set_start(1.2)
