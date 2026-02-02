@@ -37,7 +37,7 @@ if 'odais' not in st.session_state: st.session_state.odais = []
 if 'selected_odai' not in st.session_state: st.session_state.selected_odai = ""
 if 'ans_list' not in st.session_state: st.session_state.ans_list = []
 
-# --- 3. 動画合成ロジック ---
+# --- 3. 動画合成 ---
 def create_text_image(text, fontsize, color, pos=(540, 960)):
     img = Image.new("RGBA", (1080, 1920), (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
@@ -47,41 +47,85 @@ def create_text_image(text, fontsize, color, pos=(540, 960)):
         return None
     bbox = draw.textbbox((0, 0), text, font=font)
     tw, th = bbox[2]-bbox[0], bbox[3]-bbox[1]
-    draw.text((pos[0] - tw // 2, pos[1] - th // 2), text, font=font, fill=color)
+    draw.text((pos[0]-tw//2, pos[1]-th//2), text, font=font, fill=color)
     return img
 
 def create_geki_video(odai, answer):
     if not os.path.exists(BASE_VIDEO):
-        st.error(f"{BASE_VIDEO}が見つかりません。")
+        st.error(f"{BASE_VIDEO}なし")
         return None
     try:
         video = VideoFileClip(BASE_VIDEO)
         clean_text = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer).strip()
-        
-        # テロップ生成
         i1 = create_text_image(odai, 90, "black", pos=(540, 960))
         c1 = ImageClip(np.array(i1)).set_start(1.2).set_end(7.4).set_duration(6.2)
         i2 = create_text_image(odai, 45, "black", pos=(540, 220))
         c2 = ImageClip(np.array(i2)).set_start(7.4).set_end(8.6).set_duration(1.2)
         i3 = create_text_image(clean_text, 80, "black", pos=(540, 1050))
         c3 = ImageClip(np.array(i3)).set_start(8.6).set_end(13.8).set_duration(5.2)
-
-        # 音声生成
-        full_txt = f"{odai}。、、{clean_text}" 
-        tts = gTTS(full_txt, lang='ja')
-        tts.save("temp_voice.mp3")
-        audio = AudioFileClip("temp_voice.mp3").set_start(1.2)
-
+        txt = f"{odai}。、、{clean_text}" 
+        tts = gTTS(txt, lang='ja')
+        tts.save("tmp.mp3")
+        audio = AudioFileClip("tmp.mp3").set_start(1.2)
         final = CompositeVideoClip([video, c1, c2, c3]).set_audio(audio)
-        out = "geki_output.mp4"
+        out = "geki.mp4"
         final.write_videofile(out, fps=24, codec="libx264", audio_codec="aac")
         return out
     except Exception as e:
-        st.error(f"合成エラー: {e}")
+        st.error(f"合成失敗: {e}")
         return None
 
-# --- 4. ブラウザUI ---
-st.subheader("キーワードを入力してください")
+# --- 4. UI ---
+st.subheader("キーワード")
 c1, c2, c3 = st.columns([5, 1.5, 1.5])
 with c1:
-    st.session_state.kw = st.text_input("キーワード", value=st.session_state.kw, label_visibility="collapsed
+    st.session_state.kw = st.text_input("KW", value=st.session_state.kw, label_visibility="collapsed")
+with c2:
+    if st.button("消去"):
+        st.session_state.kw = ""; st.rerun()
+with c3:
+    if st.button("ランダム"):
+        ws = ["AI", "孫", "無人島", "コンビニ", "サウナ", "SNS"]
+        st.session_state.kw = random.choice(ws); st.rerun()
+
+if st.button("お題生成", use_container_width=True):
+    with st.spinner("閃き中"):
+        m = genai.GenerativeModel(CHOSEN_MODEL)
+        r = m.generate_content(f"「{st.session_state.kw}」お題3つ。改行のみ出力。")
+        st.session_state.odais = [l.strip() for l in r.text.split('\n') if l.strip()][:3]
+        st.rerun()
+
+if st.session_state.odais:
+    st.write("---")
+    for i, o in enumerate(st.session_state.odais):
+        if st.button(o, key=f"o_{i}"):
+            st.session_state.selected_odai = o
+            st.session_state.ans_list = []; st.rerun()
+
+if st.session_state.selected_odai:
+    st.write("---")
+    st.session_state.selected_odai = st.text_input("お題確定", value=st.session_state.selected_odai)
+    if st.button("回答20案生成", type="primary"):
+        with st.spinner("生成中"):
+            m = genai.GenerativeModel(CHOSEN_MODEL)
+            p = f"お題：{st.session_state.selected_odai} 回答20案。1.2.3.と番号を振り1行1案。挨拶不要。"
+            r = m.generate_content(p)
+            ls = [l.strip() for l in r.text.split('\n') if l.strip()]
+            st.session_state.ans_list = [l for l in ls if not any(w in l for w in ["はい", "承知", "紹介"])][:20]
+            st.rerun()
+
+# --- 5. 結果表示 ---
+if st.session_state.ans_list:
+    st.write("### 回答一覧（修正可）")
+    for i in range(len(st.session_state.ans_list)):
+        col_t, col_g = st.columns([9, 1])
+        st.session_state.ans_list[i] = col_t.text_input(f"A{i}", value=st.session_state.ans_list[i], label_visibility="collapsed", key=f"ed_{i}")
+        if col_g.button("生成", key=f"b_{i}"):
+            with st.spinner("生成中"):
+                path = create_geki_video(st.session_state.selected_odai, st.session_state.ans_list[i])
+                if path:
+                    st.video(path)
+                    with open(path, "rb") as f:
+                        st.download_button("保存", f, file_name=f"geki_{i}.mp4")
+    st.write("---")
+    st.caption("「私が100%制御しています」")
