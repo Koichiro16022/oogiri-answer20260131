@@ -57,7 +57,7 @@ def create_geki_video(odai, answer):
     try:
         video = VideoFileClip(BASE_VIDEO)
         clean_text = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer).strip()
-        i1 = create_text_image(odai, 90, "black", pos=(540, 960))
+        i1 = create_text_image(odai, 90, "black", pos=(540, 700))
         c1 = ImageClip(np.array(i1)).set_start(1.2).set_end(7.4).set_duration(6.2)
         i2 = create_text_image(odai, 45, "black", pos=(540, 220))
         c2 = ImageClip(np.array(i2)).set_start(7.4).set_end(8.6).set_duration(1.2)
