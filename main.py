@@ -52,7 +52,7 @@ def create_text_image(text, fontsize, color, pos=(540, 960)):
 
 def create_geki_video(odai, answer):
     if not os.path.exists(BASE_VIDEO):
-        st.error(f"{BASE_VIDEO}なし")
+        st.error("動画なし")
         return None
     try:
         video = VideoFileClip(BASE_VIDEO)
@@ -91,7 +91,9 @@ with c3:
 if st.button("お題生成", use_container_width=True):
     with st.spinner("閃き中"):
         m = genai.GenerativeModel(CHOSEN_MODEL)
-        r = m.generate_content(f"「{st.session_state.kw}」お題3つ。改行のみ出力。")
+        # 修正：お題の形式を具体的に指示
+        prompt = f"「{st.session_state.kw}」をテーマにした大喜利のお題（IPPONグランプリ風）を3つ、改行区切りで出力してください。単語だけではなく、「〜とは？」や「〜なのはなぜ？」のような疑問文形式にしてください。挨拶不要。"
+        r = m.generate_content(prompt)
         st.session_state.odais = [l.strip() for l in r.text.split('\n') if l.strip()][:3]
         st.rerun()
 
@@ -111,7 +113,7 @@ if st.session_state.selected_odai:
             p = f"お題：{st.session_state.selected_odai} 回答20案。1.2.3.と番号を振り1行1案。挨拶不要。"
             r = m.generate_content(p)
             ls = [l.strip() for l in r.text.split('\n') if l.strip()]
-            st.session_state.ans_list = [l for l in ls if not any(w in l for w in ["はい", "承知", "紹介"])][:20]
+            st.session_state.ans_list = [l for l in ls if not any(w in l for word in ["はい", "承知", "紹介"])][:20]
             st.rerun()
 
 # --- 5. 結果表示 ---
