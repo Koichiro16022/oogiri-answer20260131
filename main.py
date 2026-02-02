@@ -39,6 +39,7 @@ if 'ans_list' not in st.session_state: st.session_state.ans_list = []
 
 # --- 3. 動画合成ロジック ---
 def create_text_image(text, fontsize, color, pos=(540, 960)):
+    """透過背景にテキストを描画"""
     img = Image.new("RGBA", (1080, 1920), (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
     try:
@@ -53,6 +54,7 @@ def create_text_image(text, fontsize, color, pos=(540, 960)):
     return img
 
 def create_geki_video(odai, answer):
+    """動画合成メインプロセス"""
     if not os.path.exists(BASE_VIDEO):
         st.error(f"{BASE_VIDEO}が見つかりません。")
         return None
@@ -60,10 +62,10 @@ def create_geki_video(odai, answer):
     try:
         video = VideoFileClip(BASE_VIDEO)
         
-        # 文字のクリーニング（番号や記号を消す）
+        # 音声・文字用にクリーニング（番号等を排除）
         clean_text = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer).strip()
 
-        # テロップ生成
+        # テロップ生成（1.2s:全面、7.4s:モニター、8.6s:フリップ）
         img1 = create_text_image(odai, 90, "black", pos=(540, 960))
         clip1 = ImageClip(np.array(img1)).set_start(1.2).set_end(7.4).set_duration(6.2)
         
@@ -100,7 +102,7 @@ with col2:
         st.session_state.kw = ""; st.rerun()
 with col3:
     if st.button("ランダム"):
-        words = ["AI", "孫", "無人島", "コンビニ", "タイムマシン", "新幹線", "回転寿司", "SNS"]
+        words = ["AI", "孫", "無人島", "コンビニ", "タイムマシン", "サウナ", "キャンプ", "SNS"]
         st.session_state.kw = random.choice(words); st.rerun()
 
 if st.button("お題をAI生成", use_container_width=True):
@@ -117,35 +119,20 @@ if st.session_state.odais:
             st.session_state.selected_odai = odai
             st.session_state.ans_list = []; st.rerun()
 
+# お題の修正機能
 if st.session_state.selected_odai:
     st.write("---")
-    st.info(f"お題：{st.session_state.selected_odai}")
+    st.session_state.selected_odai = st.text_input("お題を修正・確定してください", value=st.session_state.selected_odai)
     
     if st.button("回答を20案表示", type="primary"):
         with st.spinner("20案生成中..."):
             model = genai.GenerativeModel(CHOSEN_MODEL)
-            # 非常にシンプルなプロンプトに変更してAIの迷いを消す
-            prompt = f"お題：{st.session_state.selected_odai}\nに対する爆笑回答を20案。1. 2. 3. と番号を振り、1行に1案ずつ。挨拶は一切不要。"
+            prompt = f"お題：{st.session_state.selected_odai}\nに対する爆笑回答を20案。1. 2. 3. と番号を振り、1行に1案。挨拶不要。"
             res = model.generate_content(prompt)
-            # 挨拶などが混ざっても、数字で始まる行だけを残すように制御
             lines = res.text.split('\n')
+            # 数字で始まる行だけを抽出してリスト化
             valid_ans = [l.strip() for l in lines if re.match(r'^[0-9]', l.strip())]
             st.session_state.ans_list = valid_ans[:20]
             st.rerun()
 
-# --- 5. 結果表示 ---
-if st.session_state.ans_list:
-    st.write(f"### 回答一覧（現在 {len(st.session_state.ans_list)} 案）")
-    for i, ans in enumerate(st.session_state.ans_list):
-        col_text, col_geki = st.columns([7.5, 2.5])
-        col_text.write(ans)
-        if col_geki.button("動画を生成", key=f"geki_btn_{i}"):
-            with st.spinner("動画を生成中..."):
-                video_path = create_geki_video(st.session_state.selected_odai, ans)
-                if video_path:
-                    st.video(video_path)
-                    with open(video_path, "rb") as f:
-                        st.download_button("動画を保存", f, file_name=f"geki_{i}.mp4")
-    
-    st.write("---")
-    st.caption("「私が100%制御しています」")
+# --- 5. 結果表示 ＆ 修正 ＆ 動画
