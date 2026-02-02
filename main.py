@@ -138,7 +138,11 @@ if st.session_state.ans_list:
     for i, ans in enumerate(st.session_state.ans_list):
         col_text, col_geki = st.columns([8, 2])
         col_text.write(ans)
-        if col_geki.button("劇", key=f"geki_btn_{i}"):
+            # 修正前
+# if col_geki.button("劇", key=f"geki_btn_{i}"):
+
+# 修正後
+        if col_geki.button("動画を生成", key=f"geki_btn_{i}"):
             with st.spinner("劇を生成中..."):
                 video_path = create_geki_video(st.session_state.selected_odai, ans)
                 if video_path:
