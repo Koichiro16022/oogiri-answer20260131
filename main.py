@@ -91,7 +91,7 @@ with c3:
 if st.button("お題生成", use_container_width=True):
     with st.spinner("閃き中"):
         m = genai.GenerativeModel(CHOSEN_MODEL)
-        prompt = f"「{st.session_state.kw}」テーマの大喜利お題（IPPON風）を3つ、改行のみで。単語だけではなく「〜とは？」等の形式で。挨拶不要。"
+        prompt = f"「{st.session_state.kw}」テーマの大喜利お題（IPPON風）を3つ、改行のみ。挨拶不要。"
         r = m.generate_content(prompt)
         st.session_state.odais = [l.strip() for l in r.text.split('\n') if l.strip()][:3]
         st.rerun()
@@ -106,13 +106,15 @@ if st.session_state.odais:
 if st.session_state.selected_odai:
     st.write("---")
     st.session_state.selected_odai = st.text_input("お題確定", value=st.session_state.selected_odai)
+    # ユーモアの種類を指定の4種類に限定
+    tone = st.selectbox("ユーモアの種類", ["通常", "知的", "シュール", "ブラック"])
+    
     if st.button("回答20案生成", type="primary"):
         with st.spinner("生成中"):
             m = genai.GenerativeModel(CHOSEN_MODEL)
-            p = f"お題：{st.session_state.selected_odai} 回答20案。1.2.3.と番号を振り1行1案。挨拶不要。"
+            p = f"お題：{st.session_state.selected_odai}\n雰囲気：{tone}\n回答20案。1.2.3.と番号を振り1行1案。挨拶不要。"
             r = m.generate_content(p)
             ls = [l.strip() for l in r.text.split('\n') if l.strip()]
-            # 修正ポイント：w の変数を統一して NameError を回避
             st.session_state.ans_list = [l for l in ls if not any(w in l for w in ["はい", "承知", "紹介"])][:20]
             st.rerun()
 
@@ -123,7 +125,7 @@ if st.session_state.ans_list:
         col_t, col_g = st.columns([9, 1])
         st.session_state.ans_list[i] = col_t.text_input(f"A{i}", value=st.session_state.ans_list[i], label_visibility="collapsed", key=f"ed_{i}")
         if col_g.button("生成", key=f"b_{i}"):
-            with st.spinner("動画を生成中..."):
+            with st.spinner("動画生成中"):
                 path = create_geki_video(st.session_state.selected_odai, st.session_state.ans_list[i])
                 if path:
                     st.video(path)
