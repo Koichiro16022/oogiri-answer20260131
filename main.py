@@ -46,7 +46,6 @@ def create_text_image(text, fontsize, color, pos=(540, 960)):
     try:
         font = ImageFont.truetype(FONT_PATH, fontsize)
     except:
-        st.error("フォントファイルが見つかりません。")
         return None
     
     bbox = draw.textbbox((0, 0), text, font=font)
@@ -66,5 +65,15 @@ def create_geki_video(odai, answer):
         # クリーニング（番号等を排除）
         clean_text = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer).strip()
 
-        # テロップ生成
-        img1 = create
+        # テロップ生成（1.2s:全面、7.4s:モニター、8.6s:フリップ）
+        img1 = create_text_image(odai, 90, "black", pos=(540, 960))
+        clip1 = ImageClip(np.array(img1)).set_start(1.2).set_end(7.4).set_duration(6.2)
+        
+        img2 = create_text_image(odai, 45, "black", pos=(540, 220))
+        clip2 = ImageClip(np.array(img2)).set_start(7.4).set_end(8.6).set_duration(1.2)
+        
+        img3 = create_text_image(clean_text, 80, "black", pos=(540, 1050))
+        clip3 = ImageClip(np.array(img3)).set_start(8.6).set_end(13.8).set_duration(5.2)
+
+        # 音声生成
+        full_text = f"{odai}
