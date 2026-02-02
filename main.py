@@ -18,7 +18,7 @@ CHOSEN_MODEL = 'models/gemini-2.0-flash'
 FONT_PATH = "NotoSansJP-Bold.ttf"
 BASE_VIDEO = "template.mp4"
 
-st.set_page_config(page_title="大喜利アンサー ＆ 劇", layout="centered")
+st.set_page_config(page_title="大喜利アンサー", layout="centered")
 
 # デザイン設定
 st.markdown("""
@@ -29,7 +29,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("大喜利アンサー ＆ 劇（GEKI）")
+st.title("大喜利アンサー")
 
 # --- 2. 状態管理 ---
 if 'kw' not in st.session_state: st.session_state.kw = "孫"
@@ -140,7 +140,7 @@ if st.session_state.ans_list:
         col_text, col_geki = st.columns([7.5, 2.5])
         col_text.write(ans)
         if col_geki.button("動画を生成", key=f"geki_btn_{i}"):
-            with st.spinner("劇を生成中..."):
+            with st.spinner("動画を生成中..."):
                 video_path = create_geki_video(st.session_state.selected_odai, ans)
                 if video_path:
                     st.video(video_path)
