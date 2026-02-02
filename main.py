@@ -20,12 +20,14 @@ BASE_VIDEO = "template.mp4"
 
 st.set_page_config(page_title="大喜利アンサー", layout="centered")
 
-# デザイン設定
+# デザイン設定（ボタンの右寄せと入力欄の幅を最適化）
 st.markdown("""
     <style>
     .main { background-color: #001220; color: #E5E5E5; }
     .stButton>button { width: 100%; border-radius: 5px; font-weight: bold; transition: 0.3s; }
     div.stButton > button:first-child { background: linear-gradient(135deg, #FFD700 0%, #E5E5E5 100%); color: #001220; }
+    /* 入力欄とボタンの間の余白を調整 */
+    .stTextInput { margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -121,9 +123,7 @@ if st.session_state.selected_odai:
             model = genai.GenerativeModel(CHOSEN_MODEL)
             prompt = f"お題：{st.session_state.selected_odai}\nに対する爆笑回答を20案。1. 2. 3. と番号を振ってください。挨拶は一切不要。"
             res = model.generate_content(prompt)
-            # 全行を取得
             lines = [l.strip() for l in res.text.split('\n') if l.strip()]
-            # 「はい、」「承知」などの挨拶で始まる行以外を、最大20件取得（より確実な抽出）
             valid_ans = [l for l in lines if not any(word in l for word in ["はい", "承知", "提案", "紹介"])][:20]
             st.session_state.ans_list = valid_ans
             st.rerun()
@@ -132,7 +132,8 @@ if st.session_state.selected_odai:
 if st.session_state.ans_list:
     st.write(f"### 回答一覧（修正して動画を生成）")
     for i in range(len(st.session_state.ans_list)):
-        col_text, col_geki = st.columns([7.5, 2.5])
+        # カラム比率を 8:2 に変更して、ボタンを右端へ
+        col_text, col_geki = st.columns([8, 2])
         st.session_state.ans_list[i] = col_text.text_input(
             f"回答 {i+1}", 
             value=st.session_state.ans_list[i], 
