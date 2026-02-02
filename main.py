@@ -40,51 +40,36 @@ if 'ans_list' not in st.session_state: st.session_state.ans_list = []
 
 # --- 3. 動画合成ロジック ---
 def create_text_image(text, fontsize, color, pos=(540, 960)):
-    """透過背景にテキストを描画した画像を生成"""
     img = Image.new("RGBA", (1080, 1920), (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
     try:
         font = ImageFont.truetype(FONT_PATH, fontsize)
     except:
         return None
-    
     bbox = draw.textbbox((0, 0), text, font=font)
     tw, th = bbox[2]-bbox[0], bbox[3]-bbox[1]
     draw.text((pos[0] - tw // 2, pos[1] - th // 2), text, font=font, fill=color)
     return img
 
 def create_geki_video(odai, answer):
-    """動画合成メインプロセス"""
     if not os.path.exists(BASE_VIDEO):
         st.error(f"{BASE_VIDEO}が見つかりません。")
         return None
-
     try:
         video = VideoFileClip(BASE_VIDEO)
-        
-        # クリーニング（番号等を排除）
         clean_text = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer).strip()
-
-        # テロップ生成（1.2s:全面、7.4s:モニター、8.6s:フリップ）
         img1 = create_text_image(odai, 90, "black", pos=(540, 960))
         clip1 = ImageClip(np.array(img1)).set_start(1.2).set_end(7.4).set_duration(6.2)
-        
         img2 = create_text_image(odai, 45, "black", pos=(540, 220))
         clip2 = ImageClip(np.array(img2)).set_start(7.4).set_end(8.6).set_duration(1.2)
-        
         img3 = create_text_image(clean_text, 80, "black", pos=(540, 1050))
         clip3 = ImageClip(np.array(img3)).set_start(8.6).set_end(13.8).set_duration(5.2)
-
-        # 音声生成
         full_text = f"{odai}。、、{clean_text}" 
         tts = gTTS(full_text, lang='ja')
         tts.save("temp_voice.mp3")
         audio = AudioFileClip("temp_voice.mp3").set_start(1.2)
-
-        # 合成
         final = CompositeVideoClip([video, clip1, clip2, clip3])
         final = final.set_audio(audio) 
-
         output_fn = "geki_output.mp4"
         final.write_videofile(output_fn, fps=24, codec="libx264", audio_codec="aac")
         return output_fn
@@ -121,9 +106,4 @@ if st.session_state.odais:
 
 if st.session_state.selected_odai:
     st.write("---")
-    st.session_state.selected_odai = st.text_input("お題を修正・確定してください", value=st.session_state.selected_odai)
-    
-    if st.button("回答を20案表示", type="primary"):
-        with st.spinner("20案生成中..."):
-            model = genai.GenerativeModel(CHOSEN_MODEL)
-            prompt = f"お題：{st.session_state.selected_odai}\n
+    st.session_state.selected_odai = st.text_input("お題を修正・確定してください", value=st.session_state.selected_
