@@ -37,9 +37,8 @@ if 'odais' not in st.session_state: st.session_state.odais = []
 if 'selected_odai' not in st.session_state: st.session_state.selected_odai = ""
 if 'ans_list' not in st.session_state: st.session_state.ans_list = []
 
-# --- 3. 動画合成ロジック（手動改行対応版） ---
+# --- 3. 動画合成ロジック ---
 def create_text_image(text, fontsize, color, pos=(540, 960)):
-    """スペースを改行として扱い、複数行を中央揃えで描画"""
     img = Image.new("RGBA", (1080, 1920), (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
     try:
@@ -47,7 +46,6 @@ def create_text_image(text, fontsize, color, pos=(540, 960)):
     except:
         return None
     
-    # スペースを改行に変換
     display_text = text.replace("　", "\n").replace(" ", "\n")
     lines = display_text.split("\n")
     
@@ -65,14 +63,14 @@ def create_text_image(text, fontsize, color, pos=(540, 960)):
 
 def create_geki_video(odai, answer):
     if not os.path.exists(BASE_VIDEO):
-        st.error("動画なし")
+        st.error("動画素材が見つかりません。")
         return None
     try:
         video = VideoFileClip(BASE_VIDEO)
         clean_text = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer).strip()
         
-        # お題（i1）の位置調整反映
-        i1 = create_text_image(odai, 90, "black", pos=(800, 400)) 
+        # あなたの指定位置 (700, 450) を反映
+        i1 = create_text_image(odai, 90, "black", pos=(700, 450)) 
         c1 = ImageClip(np.array(i1)).set_start(1.2).set_end(7.4).set_duration(6.2)
         
         i2 = create_text_image(odai, 45, "black", pos=(540, 220))
@@ -107,21 +105,68 @@ with c3:
         ws = ["AI", "孫", "無人島", "コンビニ", "サウナ", "SNS"]
         st.session_state.kw = random.choice(ws); st.rerun()
 
+# --- お題生成ボタン ---
 if st.button("お題生成", use_container_width=True):
-    with st.spinner("閃き中"):
+    with st.spinner("閃き中..."):
         m = genai.GenerativeModel(CHOSEN_MODEL)
         prompt = f"「{st.session_state.kw}」テーマの大喜利お題（IPPON風）を3つ、改行のみ。挨拶不要。"
         r = m.generate_content(prompt)
         st.session_state.odais = [l.strip() for l in r.text.split('\n') if l.strip()][:3]
+        # 生成直後は選択済みお題をクリアして、新しい選択を促す
+        st.session_state.selected_odai = ""
+        st.session_state.ans_list = []
         st.rerun()
 
+# --- お題の選択肢表示 ---
 if st.session_state.odais:
-    st.write("---")
+    st.write("### お題を選択してください")
     for i, o in enumerate(st.session_state.odais):
-        if st.button(o, key=f"o_{i}"):
+        # 既にお題が選択されている場合、強調表示するなど
+        if st.button(o, key=f"o_btn_{i}"):
             st.session_state.selected_odai = o
-            st.session_state.ans_list = []; st.rerun()
+            st.session_state.ans_list = [] # お題を変えたら回答リストをリセット
+            st.rerun()
 
+# --- お題確定・回答生成セクション ---
 if st.session_state.selected_odai:
     st.write("---")
-    # 修正ポイント
+    # ガイド付き入力欄
+    st.session_state.selected_odai = st.text_input(
+        "お題確定（改行箇所にスペースを入れてください）", 
+        value=st.session_state.selected_odai
+    )
+    
+    tone = st.selectbox("ユーモアの種類", ["通常", "知的", "シュール", "ブラック"])
+    
+    if st.button("回答20案生成", type="primary"):
+        with st.spinner("生成中..."):
+            m = genai.GenerativeModel(CHOSEN_MODEL)
+            p = f"お題：{st.session_state.selected_odai}\n雰囲気：{tone}\n回答20案。1.2.3.と番号を振り1行1案。挨拶不要。"
+            r = m.generate_content(p)
+            ls = [l.strip() for l in r.text.split('\n') if l.strip()]
+            # フィルタリングしてセッションに保存
+            st.session_state.ans_list = [l for l in ls if not any(w in l for w in ["はい", "承知", "紹介"])][:20]
+            st.rerun()
+
+# --- 5. 回答一覧と動画生成 ---
+if st.session_state.ans_list:
+    st.write("---")
+    st.write("### 回答一覧（修正可・改行箇所にスペース）")
+    for i in range(len(st.session_state.ans_list)):
+        col_t, col_g = st.columns([9, 1])
+        st.session_state.ans_list[i] = col_t.text_input(
+            f"A{i+1}", 
+            value=st.session_state.ans_list[i], 
+            label_visibility="collapsed", 
+            key=f"ed_ans_{i}"
+        )
+        if col_g.button("生成", key=f"b_gen_{i}"):
+            with st.spinner("動画生成中..."):
+                path = create_geki_video(st.session_state.selected_odai, st.session_state.ans_list[i])
+                if path:
+                    st.video(path)
+                    with open(path, "rb") as f:
+                        st.download_button("保存", f, file_name=f"geki_{i}.mp4")
+    
+    st.write("---")
+    st.caption("「私が100%制御しています」")
