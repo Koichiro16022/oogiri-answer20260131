@@ -24,9 +24,8 @@ st.set_page_config(page_title="大喜利アンサー", layout="centered")
 st.markdown("""
     <style>
     .main { background-color: #001220; color: #E5E5E5; }
-    .stButton>button { width: 100%; border-radius: 5px; font-weight: bold; transition: 0.3s; }
+    .stButton>button { width: 100%; border-radius: 5px; font-weight: bold; }
     div.stButton > button:first-child { background: linear-gradient(135deg, #FFD700 0%, #E5E5E5 100%); color: #001220; }
-    .stTextInput { margin-bottom: 5px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -58,52 +57,31 @@ def create_geki_video(odai, answer):
     try:
         video = VideoFileClip(BASE_VIDEO)
         clean_text = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer).strip()
-        img1 = create_text_image(odai, 90, "black", pos=(540, 960))
-        clip1 = ImageClip(np.array(img1)).set_start(1.2).set_end(7.4).set_duration(6.2)
-        img2 = create_text_image(odai, 45, "black", pos=(540, 220))
-        clip2 = ImageClip(np.array(img2)).set_start(7.4).set_end(8.6).set_duration(1.2)
-        img3 = create_text_image(clean_text, 80, "black", pos=(540, 1050))
-        clip3 = ImageClip(np.array(img3)).set_start(8.6).set_end(13.8).set_duration(5.2)
-        full_text = f"{odai}。、、{clean_text}" 
-        tts = gTTS(full_text, lang='ja')
+        
+        # テロップ生成
+        i1 = create_text_image(odai, 90, "black", pos=(540, 960))
+        c1 = ImageClip(np.array(i1)).set_start(1.2).set_end(7.4).set_duration(6.2)
+        i2 = create_text_image(odai, 45, "black", pos=(540, 220))
+        c2 = ImageClip(np.array(i2)).set_start(7.4).set_end(8.6).set_duration(1.2)
+        i3 = create_text_image(clean_text, 80, "black", pos=(540, 1050))
+        c3 = ImageClip(np.array(i3)).set_start(8.6).set_end(13.8).set_duration(5.2)
+
+        # 音声生成
+        full_txt = f"{odai}。、、{clean_text}" 
+        tts = gTTS(full_txt, lang='ja')
         tts.save("temp_voice.mp3")
         audio = AudioFileClip("temp_voice.mp3").set_start(1.2)
-        final = CompositeVideoClip([video, clip1, clip2, clip3])
-        final = final.set_audio(audio) 
-        output_fn = "geki_output.mp4"
-        final.write_videofile(output_fn, fps=24, codec="libx264", audio_codec="aac")
-        return output_fn
+
+        final = CompositeVideoClip([video, c1, c2, c3]).set_audio(audio)
+        out = "geki_output.mp4"
+        final.write_videofile(out, fps=24, codec="libx264", audio_codec="aac")
+        return out
     except Exception as e:
         st.error(f"合成エラー: {e}")
         return None
 
 # --- 4. ブラウザUI ---
 st.subheader("キーワードを入力してください")
-col1, col2, col3 = st.columns([5, 1.5, 1.5])
-with col1:
-    st.session_state.kw = st.text_input("キーワード", value=st.session_state.kw, label_visibility="collapsed")
-with col2:
-    if st.button("消去"):
-        st.session_state.kw = ""; st.rerun()
-with col3:
-    if st.button("ランダム"):
-        words = ["AI", "孫", "無人島", "コンビニ", "タイムマシン", "サウナ", "キャンプ", "SNS"]
-        st.session_state.kw = random.choice(words); st.rerun()
-
-if st.button("お題をAI生成", use_container_width=True):
-    with st.spinner("閃き中..."):
-        model = genai.GenerativeModel(CHOSEN_MODEL)
-        res = model.generate_content(f"「{st.session_state.kw}」の大喜利お題3つ。改行のみ出力。")
-        st.session_state.odais = [l.strip() for l in res.text.split('\n') if l.strip()][:3]
-        st.rerun()
-
-if st.session_state.odais:
-    st.write("---")
-    for i, odai in enumerate(st.session_state.odais):
-        if st.button(odai, key=f"odai_{i}"):
-            st.session_state.selected_odai = odai
-            st.session_state.ans_list = []; st.rerun()
-
-if st.session_state.selected_odai:
-    st.write("---")
-    st.session_state.selected_odai = st.text_input("お題を修正・確定してください", value=st.session_state.selected_
+c1, c2, c3 = st.columns([5, 1.5, 1.5])
+with c1:
+    st.session_state.kw = st.text_input("キーワード", value=st.session_state.kw, label_visibility="collapsed
