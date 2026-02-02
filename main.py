@@ -18,7 +18,7 @@ CHOSEN_MODEL = 'models/gemini-2.0-flash'
 FONT_PATH = "NotoSansJP-Bold.ttf"
 BASE_VIDEO = "template.mp4"
 
-# デザイン設定（ブランドカラー：ネイビー & ゴールド）
+# デザイン設定
 st.markdown("""
     <style>
     .main { background-color: #001220; color: #E5E5E5; }
@@ -60,7 +60,12 @@ def create_geki_video(odai, answer):
     try:
         video = VideoFileClip(BASE_VIDEO)
         
-        # テロップ生成
+        # --- 文字のクリーニング（挨拶や番号を排除） ---
+        clean_text = re.sub(r'^.*?：', '', answer)  # 前置きを削除
+        clean_text = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', clean_text)
+        clean_text = clean_text.strip()
+
+        # テロップ生成（Pillowで画像化）
         # ① お題（中央・大）: 1.2s - 7.4s
         img1 = create_text_image(odai, 90, "black", pos=(540, 960))
         clip1 = ImageClip(np.array(img1)).set_start(1.2).set_end(7.4).set_duration(6.2)
@@ -70,20 +75,18 @@ def create_geki_video(odai, answer):
         clip2 = ImageClip(np.array(img2)).set_start(7.4).set_end(8.6).set_duration(1.2)
         
         # ③ 回答（フリップ中央・大）: 8.6s - 13.8s
-        img3 = create_text_image(answer, 80, "black", pos=(540, 1050))
+        # ここで掃除した clean_text を使う
+        img3 = create_text_image(clean_text, 80, "black", pos=(540, 1050))
         clip3 = ImageClip(np.array(img3)).set_start(8.6).set_end(13.8).set_duration(5.2)
 
-        # 音声生成
-        # 音声生成（回答の先頭にある「1. 」などの数字を掃除する）
-        clean_answer = re.sub(r'^[0-9０-９\.\s、。・]+', '', answer)
-        full_text = f"{odai}。、、{clean_answer}" 
+        # 音声生成 (gTTS)
+        full_text = f"{odai}。、、{clean_text}" 
         tts = gTTS(full_text, lang='ja')
         tts.save("temp_voice.mp3")
         audio = AudioFileClip("temp_voice.mp3").set_start(1.2)
 
         # 合成
         final = CompositeVideoClip([video, clip1, clip2, clip3])
-        # 元の動画に音がある場合はミックス、ない場合はTTSのみ
         final = final.set_audio(audio) 
 
         output_fn = "geki_output.mp4"
@@ -93,7 +96,7 @@ def create_geki_video(odai, answer):
         st.error(f"合成エラー: {e}")
         return None
 
-# --- 4. ブラウザUI（キーワード〜回答生成） ---
+# --- 4. ブラウザUI ---
 st.subheader("キーワードを入力してください")
 col1, col2, col3 = st.columns([5, 1.5, 1.5])
 with col1:
@@ -130,32 +133,5 @@ if st.session_state.selected_odai:
     if st.button("回答を20案表示", type="primary"):
         with st.spinner("爆速で20案生成中..."):
             model = genai.GenerativeModel(CHOSEN_MODEL, generation_config={"max_output_tokens": 2048, "temperature": 0.8})
-# 修正前：
-# prompt = f"お題：{st.session_state.selected_odai}\n雰囲気：{tone}\nに対して爆笑回答を【必ず20案】、1行に1案。番号不要。"
-
-# 修正後（番号を「あえて」付けて出力させ、後で音声だけ掃除する仕様にします）：
-            prompt = f"お題：{st.session_state.selected_odai}\n雰囲気：{tone}\nに対して爆笑回答を【必ず20案】、1行に1案。1. 2. 3. と番号を振ってください。"
-            res = model.generate_content(prompt)
-            st.session_state.ans_list = [l.strip() for l in res.text.split('\n') if l.strip()][:20]
-            st.rerun()
-
-# --- 5. 結果表示 ＆ 劇（動画生成）セクション ---
-if st.session_state.ans_list:
-    st.write(f"### 回答一覧（現在 {len(st.session_state.ans_list)} 案）")
-    for i, ans in enumerate(st.session_state.ans_list):
-        col_text, col_geki = st.columns([8, 2])
-        col_text.write(ans)
-            # 修正前
-# if col_geki.button("劇", key=f"geki_btn_{i}"):
-
-# 修正後
-        if col_geki.button("動画を生成", key=f"geki_btn_{i}"):
-            with st.spinner("動画を生成中..."):
-                video_path = create_geki_video(st.session_state.selected_odai, ans)
-                if video_path:
-                    st.video(video_path)
-                    with open(video_path, "rb") as f:
-                        st.download_button("動画を保存", f, file_name=f"geki_{i}.mp4")
-    
-    st.write("---")
-    st.caption("「私が100%制御しています」")
+            # 挨拶禁止・番号付きのプロンプト
+            prompt = f"お題：{st.session_state.selected_odai}\n雰囲気：{tone}\nに対して爆笑回答を【必ず20案】。1. 2. 3. と番号を振ってください。挨拶や解説は一切不要です。1行目から回答のみを書いてください。"
