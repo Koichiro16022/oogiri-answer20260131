@@ -130,7 +130,11 @@ if st.session_state.selected_odai:
     if st.button("回答を20案表示", type="primary"):
         with st.spinner("爆速で20案生成中..."):
             model = genai.GenerativeModel(CHOSEN_MODEL, generation_config={"max_output_tokens": 2048, "temperature": 0.8})
-            prompt = f"お題：{st.session_state.selected_odai}\n雰囲気：{tone}\nに対して爆笑回答を【必ず20案】、1行に1案。番号不要。"
+# 修正前：
+# prompt = f"お題：{st.session_state.selected_odai}\n雰囲気：{tone}\nに対して爆笑回答を【必ず20案】、1行に1案。番号不要。"
+
+# 修正後（番号を「あえて」付けて出力させ、後で音声だけ掃除する仕様にします）：
+            prompt = f"お題：{st.session_state.selected_odai}\n雰囲気：{tone}\nに対して爆笑回答を【必ず20案】、1行に1案。1. 2. 3. と番号を振ってください。"
             res = model.generate_content(prompt)
             st.session_state.ans_list = [l.strip() for l in res.text.split('\n') if l.strip()][:20]
             st.rerun()
@@ -146,7 +150,7 @@ if st.session_state.ans_list:
 
 # 修正後
         if col_geki.button("動画を生成", key=f"geki_btn_{i}"):
-            with st.spinner("劇を生成中..."):
+            with st.spinner("動画を生成中..."):
                 video_path = create_geki_video(st.session_state.selected_odai, ans)
                 if video_path:
                     st.video(video_path)
