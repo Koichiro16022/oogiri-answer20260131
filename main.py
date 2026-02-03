@@ -18,7 +18,6 @@ CHOSEN_MODEL = 'models/gemini-2.0-flash'
 FONT_PATH = "NotoSansJP-Bold.ttf"
 BASE_VIDEO = "template.mp4"
 
-# レイアウト設定
 st.set_page_config(page_title="大喜利アンサー", layout="centered")
 
 st.markdown("""
@@ -50,7 +49,6 @@ def create_text_image(text, fontsize, color, pos=(960, 540)):
     
     display_text = text.replace("　", "\n").replace(" ", "\n")
     lines = display_text.split("\n")
-    
     line_spacing = 15
     line_heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
     total_height = sum(line_heights) + (len(lines) - 1) * line_spacing
@@ -82,19 +80,24 @@ def create_geki_video(odai, answer):
         c2 = ImageClip(np.array(i2)).set_start(8.2).set_end(9.4).set_duration(1.2)
         c3 = ImageClip(np.array(i3)).set_start(9.4).set_end(14.6).set_duration(5.2)
 
-        # 4. 音声生成（2.5秒開始）
+        # 4. 音声生成（2.5秒開始に固定）
         txt = f"{odai}。、、{clean_text}" 
         tts = gTTS(txt, lang='ja')
         tts.save("tmp.mp3")
         
         audio_clip = AudioFileClip("tmp.mp3")
-        audio = audio_clip.set_start(2.5).set_duration(audio_clip.duration)
-        audio.end = video.duration 
+        # Claudeの助言に基づき audio.end を削除し、開始位置を2.5に固定
+        audio = audio_clip.set_start(2.5)
         
         # 5. 合成
         final = CompositeVideoClip([video, c1, c2, c3], size=(1920, 1080)).set_audio(audio)
         out = "geki.mp4"
         final.write_videofile(out, fps=24, codec="libx264", audio_codec="aac")
+        
+        # 6. リソース解放（重要）
+        video.close()
+        audio_clip.close()
+        
         return out
     except Exception as e:
         st.error(f"合成失敗: {e}")
@@ -102,13 +105,13 @@ def create_geki_video(odai, answer):
 
 # --- 4. UI ---
 st.subheader("キーワード")
-c1, c2, c3 = st.columns([5, 1.5, 1.5])
-with c1:
+col1, col2, col3 = st.columns([5, 1.5, 1.5])
+with col1:
     st.session_state.kw = st.text_input("KW", value=st.session_state.kw, label_visibility="collapsed")
-with c2:
+with col2:
     if st.button("消去"):
         st.session_state.kw = ""; st.rerun()
-with c3:
+with col3:
     if st.button("ランダム"):
         ws = ["AI", "孫", "無人島", "コンビニ", "サウナ", "SNS"]
         st.session_state.kw = random.choice(ws); st.rerun()
