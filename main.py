@@ -76,7 +76,7 @@ def create_geki_video(odai, answer):
         
         # 横長キャンバス(1920x1080)基準の座標設定
         i1 = create_text_image(odai, 100, "black", pos=(960, 530)) 
-        c1 = ImageClip(np.array(i1)).set_start(2.0).set_end(8.4).set_duration(6.2)
+        c1 = ImageClip(np.array(i1)).set_start(2.0).set_end(8.0).set_duration(6.2)
         
         i2 = create_text_image(odai, 60, "black", pos=(880, 300))
         c2 = ImageClip(np.array(i2)).set_start(7.4).set_end(8.6).set_duration(1.2)
