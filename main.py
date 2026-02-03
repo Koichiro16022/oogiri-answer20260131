@@ -71,14 +71,14 @@ def create_geki_video(odai, answer):
         clean_text = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer).strip()
         
         # 2. 画像生成（お題100, モニター60, 回答120）
-        i1 = create_text_image(odai, 100, "black", pos=(960, 450)) 
-        i2 = create_text_image(odai, 60, "black", pos=(600, 350))
-        i3 = create_text_image(clean_text, 120, "black", pos=(960, 550))
+        i1 = create_text_image(odai, 100, "black", pos=(960, 530)) 
+        i2 = create_text_image(odai, 60, "black", pos=(880, 300))
+        i3 = create_text_image(clean_text, 120, "black", pos=(960, 500))
         
         # 3. タイムライン設定
-        c1 = ImageClip(np.array(i1)).set_start(2.0).set_end(8.2).set_duration(6.2)
-        c2 = ImageClip(np.array(i2)).set_start(8.2).set_end(9.4).set_duration(1.2)
-        c3 = ImageClip(np.array(i3)).set_start(9.4).set_end(14.6).set_duration(5.2)
+        c1 = ImageClip(np.array(i1)).set_start(2.0).set_end(8.0).set_duration(6.0)
+        c2 = ImageClip(np.array(i2)).set_start(8.0).set_end(10.0).set_duration(2.0)
+        c3 = ImageClip(np.array(i3)).set_start(10.1).set_end(16.0).set_duration(5.9)
 
         # 4. 音声生成（2.5秒開始に固定）
         txt = f"{odai}。、、{clean_text}" 
