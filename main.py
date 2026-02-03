@@ -82,7 +82,7 @@ def create_geki_video(odai, answer):
         c2 = ImageClip(np.array(i2)).set_start(8.0).set_end(10.0).set_duration(2.0)
         
         i3 = create_text_image(clean_text, 120, "black", pos=(960, 500))
-        c3 = ImageClip(np.array(i3)).set_start(10.5).set_end(16.0).set_duration(5.5)
+        c3 = ImageClip(np.array(i3)).set_start(10.1).set_end(16.0).set_duration(5.9)
 
         txt = f"{odai}。、、{clean_text}" 
         tts = gTTS(txt, lang='ja')
