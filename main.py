@@ -87,7 +87,7 @@ def create_geki_video(odai, answer):
         txt = f"{odai}。、、{clean_text}" 
         tts = gTTS(txt, lang='ja')
         tts.save("tmp.mp3")
-        audio = AudioFileClip("tmp.mp3").set_start(1.2)
+        audio = AudioFileClip("tmp.mp3").set_start(2.5)
         
         # 合成サイズを1920x1080に指定
         final = CompositeVideoClip([video, c1, c2, c3], size=(1920, 1080)).set_audio(audio)
