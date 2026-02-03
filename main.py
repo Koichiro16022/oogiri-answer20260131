@@ -81,7 +81,7 @@ def create_geki_video(odai, answer):
         i2 = create_text_image(odai, 60, "black", pos=(880, 300))
         c2 = ImageClip(np.array(i2)).set_start(7.4).set_end(8.6).set_duration(1.2)
         
-        i3 = create_text_image(clean_text, 75, "black", pos=(960, 800))
+        i3 = create_text_image(clean_text, 120, "black", pos=(960, 550))
         c3 = ImageClip(np.array(i3)).set_start(8.6).set_end(13.8).set_duration(5.2)
 
         txt = f"{odai}。、、{clean_text}" 
