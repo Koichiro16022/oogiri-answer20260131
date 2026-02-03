@@ -53,5 +53,23 @@ def create_text_image(text, fontsize, color, pos=(960, 540)):
     lines = display_text.split("\n")
     
     line_spacing = 15
+    # 文字の高さを計算
     line_heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
-    total_height = sum(line_heights) + (len(lines) -
+    # 正しく1行で記述し、カッコの閉じ忘れを防止
+    total_height = sum(line_heights) + (len(lines) - 1) * line_spacing
+    
+    current_y = pos[1] - total_height // 2
+    for i, line in enumerate(lines):
+        bbox = draw.textbbox((0, 0), line, font=font)
+        line_w = bbox[2] - bbox[0]
+        draw.text((pos[0] - line_w // 2, current_y), line, font=font, fill=color)
+        current_y += line_heights[i] + line_spacing
+    return img
+
+def create_geki_video(odai, answer):
+    if not os.path.exists(BASE_VIDEO):
+        st.error("動画素材が見つかりません。")
+        return None
+    try:
+        video = VideoFileClip(BASE_VIDEO)
+        clean_text
