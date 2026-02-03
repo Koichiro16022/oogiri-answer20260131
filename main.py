@@ -18,7 +18,7 @@ CHOSEN_MODEL = 'models/gemini-2.0-flash'
 FONT_PATH = "NotoSansJP-Bold.ttf"
 BASE_VIDEO = "template.mp4"
 
-# 修正ポイント：layoutを "centered" に戻して以前の表示を再現
+# UIのレイアウトは以前のcenteredを維持
 st.set_page_config(page_title="大喜利アンサー", layout="centered")
 
 # デザイン設定
@@ -27,7 +27,6 @@ st.markdown("""
     .main { background-color: #001220; color: #E5E5E5; }
     .stButton>button { width: 100%; border-radius: 5px; font-weight: bold; }
     div.stButton > button:first-child { background: linear-gradient(135deg, #FFD700 0%, #E5E5E5 100%); color: #001220; }
-    /* 動画プレイヤーが大きくなりすぎないよう調整 */
     .stVideo { max-width: 100%; margin: auto; }
     </style>
     """, unsafe_allow_html=True)
@@ -40,9 +39,9 @@ if 'odais' not in st.session_state: st.session_state.odais = []
 if 'selected_odai' not in st.session_state: st.session_state.selected_odai = ""
 if 'ans_list' not in st.session_state: st.session_state.ans_list = []
 
-# --- 3. 動画合成ロジック（内部は横長・中央揃え） ---
+# --- 3. 動画合成ロジック ---
 def create_text_image(text, fontsize, color, pos=(960, 540)):
-    """内部処理は1920x1080の広大なキャンバスで行う"""
+    """横長キャンバス(1920x1080)・中央揃え描画"""
     img = Image.new("RGBA", (1920, 1080), (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
     try:
@@ -61,7 +60,6 @@ def create_text_image(text, fontsize, color, pos=(960, 540)):
     for i, line in enumerate(lines):
         bbox = draw.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
-        # 中央揃えロジック
         draw.text((pos[0] - line_w // 2, current_y), line, font=font, fill=color)
         current_y += line_heights[i] + line_spacing
     return img
@@ -74,29 +72,28 @@ def create_geki_video(odai, answer):
         video = VideoFileClip(BASE_VIDEO)
         clean_text = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer).strip()
         
-        # 横長キャンバス(1920x1080)基準の座標設定
-        i1 = create_text_image(odai, 100, "black", pos=(960, 530)) 
-        c1 = ImageClip(np.array(i1)).set_start(2.0).set_end(8.0).set_duration(6.0)
+        # 1. お題：フォント100、出現2.0秒、終了8.2秒
+        i1 = create_text_image(odai, 100, "black", pos=(960, 450)) 
+        c1 = ImageClip(np.array(i1)).set_start(2.0).set_end(8.2).set_duration(6.2)
         
-        i2 = create_text_image(odai, 60, "black", pos=(880, 300))
-        c2 = ImageClip(np.array(i2)).set_start(8.0).set_end(10.0).set_duration(2.0)
+        # 2. モニター：フォント60、出現8.2秒、位置調整済み
+        i2 = create_text_image(odai, 60, "black", pos=(600, 350))
+        c2 = ImageClip(np.array(i2)).set_start(8.2).set_end(9.4).set_duration(1.2)
         
-        i3 = create_text_image(clean_text, 120, "black", pos=(960, 500))
-        c3 = ImageClip(np.array(i3)).set_start(10.1).set_end(16.0).set_duration(5.9)
+        # 3. 回答：フォント120、位置調整済み（上へ）
+        i3 = create_text_image(clean_text, 120, "black", pos=(960, 550))
+        c3 = ImageClip(np.array(i3)).set_start(9.4).set_end(14.6).set_duration(5.2)
 
+        # --- 音声設定の修正 ---
         txt = f"{odai}。、、{clean_text}" 
         tts = gTTS(txt, lang='ja')
         tts.save("tmp.mp3")
-# --- 修正前 ---
-# audio = AudioFileClip("tmp.mp3").set_start(2.5)
-
-# --- 修正後（71行目付近をこれに差し替えてください） ---
-audio_clip = AudioFileClip("tmp.mp3")
-# 音声の長さそのものを取得し、動画の2.5秒地点から配置。
-# かつ、音声が動画の最後まで（または適切に）続くように設定を確実にする。
+        
+        # インデントを揃えて配置
+        audio_clip = AudioFileClip("tmp.mp3")
         audio = audio_clip.set_start(2.5).set_duration(audio_clip.duration)
         
-        # 合成サイズを1920x1080に指定
+        # 最後に合成（1920x1080サイズ）
         final = CompositeVideoClip([video, c1, c2, c3], size=(1920, 1080)).set_audio(audio)
         out = "geki.mp4"
         final.write_videofile(out, fps=24, codec="libx264", audio_codec="aac")
@@ -105,7 +102,7 @@ audio_clip = AudioFileClip("tmp.mp3")
         st.error(f"合成失敗: {e}")
         return None
 
-# --- 4. UI（centeredレイアウトで以前の見た目を維持） ---
+# --- 4. UI ---
 st.subheader("キーワード")
 c1, c2, c3 = st.columns([5, 1.5, 1.5])
 with c1:
@@ -156,7 +153,7 @@ if st.session_state.selected_odai:
 
 if st.session_state.ans_list:
     st.write("---")
-    st.write("### 回答一覧（修正可・改行箇所にスペース）")
+    st.write("### 回答一覧")
     for i in range(len(st.session_state.ans_list)):
         col_t, col_g = st.columns([9, 1])
         st.session_state.ans_list[i] = col_t.text_input(
