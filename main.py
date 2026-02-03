@@ -75,7 +75,7 @@ def create_geki_video(odai, answer):
         clean_text = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer).strip()
         
         # 横長キャンバス(1920x1080)基準の座標設定
-        i1 = create_text_image(odai, 70, "black", pos=(960, 450)) 
+        i1 = create_text_image(odai, 100, "black", pos=(960, 450)) 
         c1 = ImageClip(np.array(i1)).set_start(1.2).set_end(7.4).set_duration(6.2)
         
         i2 = create_text_image(odai, 45, "black", pos=(1500, 200))
