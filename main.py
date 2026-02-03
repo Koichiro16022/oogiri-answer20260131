@@ -78,7 +78,7 @@ def create_geki_video(odai, answer):
         i1 = create_text_image(odai, 100, "black", pos=(960, 450)) 
         c1 = ImageClip(np.array(i1)).set_start(1.2).set_end(7.4).set_duration(6.2)
         
-        i2 = create_text_image(odai, 45, "black", pos=(1500, 200))
+        i2 = create_text_image(odai, 60, "black", pos=(600, 350))
         c2 = ImageClip(np.array(i2)).set_start(7.4).set_end(8.6).set_duration(1.2)
         
         i3 = create_text_image(clean_text, 80, "black", pos=(960, 800))
