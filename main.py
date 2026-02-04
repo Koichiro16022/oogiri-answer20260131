@@ -41,7 +41,7 @@ if 'selected_odai' not in st.session_state: st.session_state.selected_odai = ""
 if 'ans_list' not in st.session_state: st.session_state.ans_list = []
 if 'pronounce_list' not in st.session_state: st.session_state.pronounce_list = []
 
-# 初期学習データ
+# 初期学習データ（1/31当時の傑作選）
 if 'golden_examples' not in st.session_state:
     st.session_state.golden_examples = [
         {"odai": "目に入れても痛くない孫におじいちゃんがブチギレ。いったい何があった？", "ans": "おじいちゃんの入れ歯をメルカリで『ビンテージ雑貨』として出品していた"},
@@ -111,17 +111,21 @@ def create_geki_video(odai, answer_display, answer_audio):
         if not os.path.exists(f): return None
     try:
         video = VideoFileClip(BASE_VIDEO).without_audio()
+        # 字幕案と音声読み上げを分離
         clean_display = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer_display).strip()
         clean_audio = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer_audio).strip()
         
+        # 修正：clean_display（字幕案）を映像合成に渡す
         i1 = create_text_image(odai, 100, "black", pos=(960, 530)) 
         i2 = create_text_image(odai, 55, "black", pos=(880, 300))
         i3 = create_text_image(clean_display, 120, "black", pos=(960, 500))
+        
         c1 = ImageClip(np.array(i1)).set_start(2.0).set_end(8.0).set_duration(6.0)
         c2 = ImageClip(np.array(i2)).set_start(8.0).set_end(10.0).set_duration(2.0)
         c3 = ImageClip(np.array(i3)).set_start(10.0).set_end(16.0).set_duration(6.0)
         
         voice_odai_clip = build_controlled_audio(odai, mode="gtts")
+        # 修正：clean_audio（発音用）を音声合成に渡す
         voice_ans_clip = build_controlled_audio(clean_audio, mode="edge")
         
         audio_list = []
@@ -130,9 +134,11 @@ def create_geki_video(odai, answer_display, answer_audio):
         s1_audio = AudioFileClip(SOUND1).set_start(0.8).volumex(0.2)
         s2_audio = AudioFileClip(SOUND2).set_start(9.0).volumex(0.3)
         audio_list.extend([s1_audio, s2_audio])
+        
         final = video.set_audio(CompositeAudioClip(audio_list))
         out = "geki.mp4"
         final.write_videofile(out, fps=24, codec="libx264", audio_codec="aac", remove_temp=True)
+        video.close(); final.close()
         return out
     except Exception as e:
         st.error(f"合成失敗: {e}"); return None
@@ -177,13 +183,11 @@ if st.session_state.selected_odai:
             p = f"伝説の大喜利回答者として【お題】:{st.session_state.selected_odai}に答えよ。手本:{ex}\nルール:回答のみ20個、番号を振り1行1案で。カッコ説明禁止。"
             r = m.generate_content(p)
             ans_raw = [l.strip() for l in r.text.split('\n') if l.strip()][:20]
-            # ここで2つのリストを同時に確実に初期化する（IndexError防止）
             st.session_state.ans_list = ans_raw
             st.session_state.pronounce_list = ans_raw[:]
             st.rerun()
 
 if st.session_state.ans_list:
-    # リストの長さが一致していることを保証する安全策
     list_len = min(len(st.session_state.ans_list), len(st.session_state.pronounce_list))
     st.write("### 回答一覧（下の黄色い欄で読み方を修正できます）")
     for i in range(list_len):
