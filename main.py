@@ -180,7 +180,7 @@ if st.session_state.odais:
 
 if st.session_state.selected_odai:
     st.write("---")
-    st.session_state.selected_odai = st.text_input("お題確定", value=st.session_state.selected_odai)
+    st.session_state.selected_odai = st.text_input("お題確定（スペースで改行、_で無音のタメ）", value=st.session_state.selected_odai)
     st.session_state.selected_odai_pron = st.text_input("お題の読み修正", value=st.session_state.selected_odai_pron)
     st.markdown(f'<p class="odai-pronounce">↑ お題の発音修正</p>', unsafe_allow_html=True)
     
