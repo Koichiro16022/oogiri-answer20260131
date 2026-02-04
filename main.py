@@ -22,7 +22,7 @@ BASE_VIDEO = "template.mp4"
 SOUND1 = "sound1.mp3"  # お題直前 (0.8s)
 SOUND2 = "sound2.mp3"  # 回答誘導 (9.0s)
 
-st.set_page_config(page_title="大喜利アンサー", layout="centered")
+st.set_page_config(page_title="大喜利アンサー", layout="wide")
 
 st.markdown("""
     <style>
@@ -33,15 +33,53 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("大喜利アンサー")
-
-# --- 2. 状態管理 ---
+# --- 2. 状態管理（学習データ含む） ---
 if 'kw' not in st.session_state: st.session_state.kw = "孫"
 if 'odais' not in st.session_state: st.session_state.odais = []
 if 'selected_odai' not in st.session_state: st.session_state.selected_odai = ""
 if 'ans_list' not in st.session_state: st.session_state.ans_list = []
 
-# --- 3. 音声生成用ヘルパー (MoviePy純正で沈黙を作る) ---
+# 初期学習データの定義（1/31当時の傑作選）
+if 'golden_examples' not in st.session_state:
+    st.session_state.golden_examples = [
+        {"odai": "目に入れても痛くない孫におじいちゃんがブチギレ。いったい何があった？", "ans": "おじいちゃんの入れ歯をメルカリで『ビンテージ雑貨』として出品していた"},
+        {"odai": "この番組絶対ドッキリだろ！なぜ気付いた？", "ans": "通行人10人全員がよく見たらエキストラのバイト募集で見かけた顔だった"},
+        {"odai": "ハゲてて良かった～なぜそう思った？", "ans": "職質のプロに『君、隠し事なさそうな頭してるね』とスルーされた"},
+        {"odai": "ハゲてて良かった～なぜそう思った？", "ans": "美容師さんにお任せでと言ったら3秒で会計が終わった"},
+        {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "家族写真のお母さんの顔の部分だけに執拗に『ブサイクになるフィルター』をかけて保存した"},
+        {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "お母さんが大切にしている観葉植物を、勝手にメルカリで売れたんでと梱包し始めた"},
+        {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "おばさんその服カーテンと同じ柄ですね！と明るく指摘した"},
+        {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "お母さんの寝顔を勝手に撮影して#化け物 #拡散希望でアップしようとしていた"},
+        {"odai": "とある大学のしきたりが1年生は全員激辛ラーメン一気食いだが、ある生徒だけは3年生になってもやらされていた。一体なぜ？", "ans": "あまりにも美味しそうに食べるので店側が『プロモーションビデオ』を撮り続けている"},
+        {"odai": "とある大学のしきたりが1年生は全員激辛ラーメン一気食いだが、ある生徒だけは3年生になってもやらされていた。一体なぜ？", "ans": "激辛ラーメンを完食するまでが入学式というルールだがまだ一口も飲み込めていない"},
+        {"odai": "とある大学のしきたりが1年生は全員激辛ラーメン一気食いだが、ある生徒だけは3年生になってもやらされていた。一体なぜ？", "ans": "『激辛ラーメン一気食い部』という世界で一番不毛な部活の部長になったから"},
+        {"odai": "友達と2人で古畑任三郎を観ていて事件を解決した後、友達が必ずする行動とは？", "ans": "今回の犯行手口をChatGPTに入力し、『もっとバレにくい方法』を3案出させる"},
+        {"odai": "友達と2人で古畑任三郎を観ていて事件を解決した後、友達が必ずする行動とは？", "ans": "真っ暗な部屋でおでこに人差し指を当てたままルンバの後をずっと追いかける"},
+        {"odai": "友達と2人で古畑任三郎を観ていて事件を解決した後、友達が必ずする行動とは？", "ans": "警察の鑑識並みの手際で部屋に残った私の指紋をすべて拭き取り始める"}
+    ]
+
+# --- 3. サイドバー（追加学習フォーム） ---
+with st.sidebar:
+    st.header("🧠 感性同期・追加学習")
+    st.write("面白いと思ったセットを追加して、Geminiを育ててください。")
+    new_odai = st.text_area("お題を追加", height=100)
+    new_ans = st.text_input("回答を追加")
+    if st.button("感性を覚えさせる"):
+        if new_odai and new_ans:
+            st.session_state.golden_examples.append({"odai": new_odai, "ans": new_ans})
+            st.success("学習リストに追加しました！")
+            st.rerun()
+        else:
+            st.warning("お題と回答の両方を入力してください。")
+    
+    st.write("---")
+    st.write("### 現在の学習済みリスト")
+    for i, ex in enumerate(st.session_state.golden_examples):
+        with st.expander(f"例 {i+1}"):
+            st.write(f"**お題**: {ex['odai']}")
+            st.write(f"**回答**: {ex['ans']}")
+
+# --- 4. 音声・動画ロジック（変更厳禁箇所） ---
 async def save_edge_voice(text, filename, voice_name, rate="+15%"):
     communicate = edge_tts.Communicate(text, voice_name, rate=rate)
     await communicate.save(filename)
@@ -68,7 +106,6 @@ def build_controlled_audio(full_text, mode="gtts"):
     if not clips: return None
     return concatenate_audioclips(clips)
 
-# --- 4. 動画合成ロジック ---
 def create_text_image(text, fontsize, color, pos=(960, 540)):
     img = Image.new("RGBA", (1920, 1080), (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
@@ -122,25 +159,9 @@ def create_geki_video(odai, answer):
     except Exception as e:
         st.error(f"合成失敗: {e}"); return None
 
-# --- 5. 【100%制御】黄金の回答リスト（1/31当時の傑作選：感性同期の核） ---
-GOLDEN_EXAMPLES = [
-    {"odai": "目に入れても痛くない孫におじいちゃんがブチギレ。いったい何があった？", "ans": "おじいちゃんの入れ歯をメルカリで『ビンテージ雑貨』として出品していた"},
-    {"odai": "この番組絶対ドッキリだろ！なぜ気付いた？", "ans": "通行人10人全員がよく見たらエキストラのバイト募集で見かけた顔だった"},
-    {"odai": "ハゲてて良かった～なぜそう思った？", "ans": "職質のプロに『君、隠し事なさそうな頭してるね』とスルーされた"},
-    {"odai": "ハゲてて良かった～なぜそう思った？", "ans": "美容師さんにお任せでと言ったら3秒で会計が終わった"},
-    {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "家族写真のお母さんの顔の部分だけに執拗に『ブサイクになるフィルター』をかけて保存した"},
-    {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "お母さんが大切にしている観葉植物を、勝手にメルカリで売れたんでと梱包し始めた"},
-    {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "おばさんその服カーテンと同じ柄ですね！と明るく指摘した"},
-    {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "お母さんの寝顔を勝手に撮影して#化け物 #拡散希望でアップしようとしていた"},
-    {"odai": "とある大学のしきたりが1年生は全員激辛ラーメン一気食いだが、ある生徒だけは3年生になってもやらされていた。一体なぜ？", "ans": "あまりにも美味しそうに食べるので店側が『プロモーションビデオ』を撮り続けている"},
-    {"odai": "とある大学のしきたりが1年生は全員激辛ラーメン一気食いだが、ある生徒だけは3年生になってもやらされていた。一体なぜ？", "ans": "激辛ラーメンを完食するまでが入学式というルールだがまだ一口も飲み込めていない"},
-    {"odai": "とある大学のしきたりが1年生は全員激辛ラーメン一気食いだが、ある生徒だけは3年生になってもやらされていた。一体なぜ？", "ans": "『激辛ラーメン一気食い部』という世界で一番不毛な部活の部長になったから"},
-    {"odai": "友達と2人で古畑任三郎を観ていて事件を解決した後、友達が必ずする行動とは？", "ans": "今回の犯行手口をChatGPTに入力し、『もっとバレにくい方法』を3案出させる"},
-    {"odai": "友達と2人で古畑任三郎を観ていて事件を解決した後、友達が必ずする行動とは？", "ans": "真っ暗な部屋でおでこに人差し指を当てたままルンバの後をずっと追いかける"},
-    {"odai": "友達と2人で古畑任三郎を観ていて事件を解決した後、友達が必ずする行動とは？", "ans": "警察の鑑識並みの手際で部屋に残った私の指紋をすべて拭き取り始める"}
-]
+# --- 5. メインUI ---
+st.title("大喜利アンサー")
 
-# --- 6. UI ---
 st.subheader("キーワード")
 col1, col2, col3 = st.columns([5, 1.5, 1.5])
 with col1:
@@ -175,7 +196,9 @@ if st.session_state.selected_odai:
     if st.button("回答20案生成", type="primary"):
         with st.spinner("魂の20案を捻り出し中..."):
             m = genai.GenerativeModel(CHOSEN_MODEL)
-            examples_str = "\n".join([f"お題：{ex['odai']}\n回答：{ex['ans']}" for ex in GOLDEN_EXAMPLES])
+            # 現在のセッションにある学習データをすべてプロンプトに反映
+            examples_str = "\n".join([f"お題：{ex['odai']}\n回答：{ex['ans']}" for ex in st.session_state.golden_examples])
+            
             style_prompts = {
                 "通常": "自由な発想で、最も爆笑を誘うボケを優先せよ。",
                 "知的": "教養、専門用語、文学的表現などを用いたインテリなボケ。",
