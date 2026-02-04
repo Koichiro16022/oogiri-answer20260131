@@ -175,20 +175,4 @@ if st.session_state.selected_odai:
     st.write("---")
     st.session_state.selected_odai = st.text_input(
         "お題確定（改行箇所にスペースを入れてください）", 
-        value=st.session_state.selected_odai
-    )
-    
-    tone = st.selectbox("ユーモアの種類", ["通常", "知的", "シュール", "ブラック"])
-    
-    if st.button("回答20案生成", type="primary"):
-        with st.spinner("生成中..."):
-            m = genai.GenerativeModel(CHOSEN_MODEL)
-            p = f"お題：{st.session_state.selected_odai}\n雰囲気：{tone}\n回答20案。1.2.3.と番号を振り1行1案。挨拶不要。"
-            r = m.generate_content(p)
-            ls = [l.strip() for l in r.text.split('\n') if l.strip()]
-            st.session_state.ans_list = [l for l in ls if not any(w in l for w in ["はい", "承知", "紹介"])][:20]
-            st.rerun()
-
-if st.session_state.ans_list:
-    st.write("---")
-    st.write("
+        value=st.session_state.selected_
