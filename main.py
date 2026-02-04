@@ -41,7 +41,7 @@ if 'selected_odai' not in st.session_state: st.session_state.selected_odai = ""
 if 'ans_list' not in st.session_state: st.session_state.ans_list = []
 if 'pronounce_list' not in st.session_state: st.session_state.pronounce_list = []
 
-# 初期学習データ（1/31当時の傑作選）
+# 初期学習データ
 if 'golden_examples' not in st.session_state:
     st.session_state.golden_examples = [
         {"odai": "目に入れても痛くない孫におじいちゃんがブチギレ。いったい何があった？", "ans": "おじいちゃんの入れ歯をメルカリで『ビンテージ雑貨』として出品していた"},
@@ -93,8 +93,9 @@ def create_text_image(text, fontsize, color, pos=(960, 540)):
     try: font = ImageFont.truetype(FONT_PATH, fontsize)
     except: return None
     
-    # ★修正: 音声制御用の_を字幕には表示しない。全角/半角スペースのみを改行に変換。
+    # ★重要: 音声制御用_を削除した後、スペースを確実に改行に変換
     clean_display = text.replace("_", "")
+    # 全角スペース「　」と半角スペース「 」の両方を「\n」に変換する
     display_text = clean_display.replace("　", "\n").replace(" ", "\n")
     lines = display_text.split("\n")
     
@@ -148,7 +149,7 @@ def create_geki_video(odai, answer_display, answer_audio):
     except Exception as e:
         st.error(f"合成失敗: {e}"); return None
 
-# --- 4. サイドバー（重複防止機能つき） ---
+# --- 4. サイドバー ---
 with st.sidebar:
     st.header("🧠 感性同期・追加学習")
     with st.form("learning_form", clear_on_submit=True):
@@ -174,7 +175,7 @@ st.title("大喜利アンサー")
 kw_col, clr_col, rnd_col = st.columns([5, 1, 1])
 st.session_state.kw = kw_col.text_input("キーワード", value=st.session_state.kw, label_visibility="collapsed")
 if clr_col.button("消去"): st.session_state.kw = ""; st.rerun()
-if rnd_col.button("ランダム"): st.session_state.kw = random.choice(["AI", "孫", "サウナ"]); st.rerun()
+if rnd_col.button("ランダム"): st.session_state.kw = random.choice(["AI", "孫", "サウナ", "SNS", "古畑任三郎", "母親"]); st.rerun()
 
 if st.button("お題生成", use_container_width=True):
     m = genai.GenerativeModel(CHOSEN_MODEL)
