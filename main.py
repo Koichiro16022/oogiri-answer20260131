@@ -88,44 +88,54 @@ def build_controlled_audio(full_text, mode="gtts"):
     return concatenate_audioclips(clips)
 
 def create_text_image(text, fontsize, color, pos=(960, 540)):
+    """★Claude案統合: numpy配列を直接返すテキスト画像生成"""
     img = Image.new("RGBA", (1920, 1080), (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
-    try: font = ImageFont.truetype(FONT_PATH, fontsize)
-    except: return None
     
-    # ★重要: 音声制御用_を削除した後、スペースを確実に改行に変換
+    try: 
+        font = ImageFont.truetype(FONT_PATH, fontsize)
+    except: 
+        font = ImageFont.load_default() # フォールバック
+
+    # 音声制御用_は削除、スペースは改行へ
     clean_display = text.replace("_", "")
-    # 全角スペース「　」と半角スペース「 」の両方を「\n」に変換する
     display_text = clean_display.replace("　", "\n").replace(" ", "\n")
-    lines = display_text.split("\n")
+    lines = [l for l in display_text.split("\n") if l.strip()]
+    if not lines: lines = [" "]
     
     line_spacing = 15
     line_heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
     total_height = sum(line_heights) + (len(lines) - 1) * line_spacing
+    
     current_y = pos[1] - total_height // 2
     for i, line in enumerate(lines):
         bbox = draw.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
         draw.text((pos[0] - line_w // 2, current_y), line, font=font, fill=color)
         current_y += line_heights[i] + line_spacing
-    return img
+    
+    return np.array(img)
 
 def create_geki_video(odai, answer_display, answer_audio):
+    """★Claude案統合: 映像・音声合成の完全修正版"""
     for f in [BASE_VIDEO, SOUND1, SOUND2]:
-        if not os.path.exists(f): return None
+        if not os.path.exists(f): 
+            st.error(f"素材不足: {f}")
+            return None
     try:
         video = VideoFileClip(BASE_VIDEO).without_audio()
         clean_display = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer_display).strip()
         clean_audio = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer_audio).strip()
         
-        # 画像生成
+        # 画像生成 (numpy配列が直接返る)
         i1 = create_text_image(odai, 100, "black", pos=(960, 530)) 
         i2 = create_text_image(odai, 55, "black", pos=(880, 300))
         i3 = create_text_image(clean_display, 120, "black", pos=(960, 500))
         
-        c1 = ImageClip(np.array(i1)).set_start(2.0).set_end(8.0).set_duration(6.0)
-        c2 = ImageClip(np.array(i2)).set_start(8.0).set_end(10.0).set_duration(2.0)
-        c3 = ImageClip(np.array(i3)).set_start(10.0).set_end(16.0).set_duration(6.0)
+        # クリップ作成
+        c1 = ImageClip(i1).set_start(2.0).set_end(8.0)
+        c2 = ImageClip(i2).set_start(8.0).set_end(10.0)
+        c3 = ImageClip(i3).set_start(10.0).set_end(16.0)
         
         # 音声生成
         voice_odai_clip = build_controlled_audio(odai, mode="gtts")
@@ -134,22 +144,29 @@ def create_geki_video(odai, answer_display, answer_audio):
         audio_list = []
         if voice_odai_clip: audio_list.append(voice_odai_clip.set_start(2.5))
         if voice_ans_clip: audio_list.append(voice_ans_clip.set_start(10.5))
-        s1_audio = AudioFileClip(SOUND1).set_start(0.8).volumex(0.2)
-        s2_audio = AudioFileClip(SOUND2).set_start(9.0).volumex(0.3)
-        audio_list.extend([s1_audio, s2_audio])
         
-        # 映像・音声合成
+        if os.path.exists(SOUND1):
+            audio_list.append(AudioFileClip(SOUND1).set_start(0.8).volumex(0.2))
+        if os.path.exists(SOUND2):
+            audio_list.append(AudioFileClip(SOUND2).set_start(9.0).volumex(0.3))
+        
+        # 合成
         video_composite = CompositeVideoClip([video, c1, c2, c3], size=(1920, 1080))
         final = video_composite.set_audio(CompositeAudioClip(audio_list))
         
         out = "geki.mp4"
-        final.write_videofile(out, fps=24, codec="libx264", audio_codec="aac", remove_temp=True)
-        video.close(); final.close()
+        final.write_videofile(out, fps=24, codec="libx264", audio_codec="aac", temp_audiofile='temp-audio.m4a', remove_temp=True, logger=None)
+        
+        # ★リソース解放
+        video.close()
+        if voice_odai_clip: voice_odai_clip.close()
+        if voice_ans_clip: voice_ans_clip.close()
+        final.close()
         return out
     except Exception as e:
         st.error(f"合成失敗: {e}"); return None
 
-# --- 4. サイドバー ---
+# --- 4. サイドバー（感性同期・重複防止） ---
 with st.sidebar:
     st.header("🧠 感性同期・追加学習")
     with st.form("learning_form", clear_on_submit=True):
@@ -162,26 +179,24 @@ with st.sidebar:
                     st.session_state.golden_examples.append({"odai": new_odai, "ans": new_ans})
                     st.success("お題と回答を登録しました。")
                 else:
-                    st.warning("その内容は既に登録済みです。")
+                    st.warning("登録済みです。")
     st.write(f"### 学習済みリスト ({len(st.session_state.golden_examples)}件)")
     for i, ex in enumerate(reversed(st.session_state.golden_examples)):
-        idx = len(st.session_state.golden_examples) - i
-        with st.expander(f"傑作 {idx}"):
-            st.write(f"**お題**: {ex['odai']}")
-            st.write(f"**回答**: {ex['ans']}")
+        with st.expander(f"傑作 {len(st.session_state.golden_examples)-i}"):
+            st.write(f"**お題**: {ex['odai']}\n**回答**: {ex['ans']}")
 
 # --- 5. メインUI ---
 st.title("大喜利アンサー")
 kw_col, clr_col, rnd_col = st.columns([5, 1, 1])
-st.session_state.kw = kw_col.text_input("キーワード", value=st.session_state.kw, label_visibility="collapsed")
+st.session_state.kw = kw_col.text_input("KW", value=st.session_state.kw, label_visibility="collapsed")
 if clr_col.button("消去"): st.session_state.kw = ""; st.rerun()
-if rnd_col.button("ランダム"): st.session_state.kw = random.choice(["AI", "孫", "サウナ", "SNS", "古畑任三郎", "母親"]); st.rerun()
+if rnd_col.button("ランダム"): st.session_state.kw = random.choice(["孫", "サウナ", "SNS", "古畑任三郎"]); st.rerun()
 
 if st.button("お題生成", use_container_width=True):
     m = genai.GenerativeModel(CHOSEN_MODEL)
     r = m.generate_content(f"「{st.session_state.kw}」テーマの大喜利お題を3つ。回答のみ3行で。")
     st.session_state.odais = [l.strip() for l in r.text.split('\n') if l.strip()][:3]
-    st.session_state.selected_odai = ""; st.rerun()
+    st.rerun()
 
 if st.session_state.odais:
     for i, o in enumerate(st.session_state.odais):
@@ -194,8 +209,8 @@ if st.session_state.selected_odai:
     if st.button("回答20案生成", type="primary"):
         with st.spinner("思考中..."):
             m = genai.GenerativeModel(CHOSEN_MODEL)
-            ex = "\n".join([f"お題：{e['odai']}\n回答：{e['ans']}" for e in st.session_state.golden_examples])
-            p = f"伝説の大喜利回答者として【お題】:{st.session_state.selected_odai}に答えよ。手本:{ex}\nルール:回答のみ20個、番号を振り1行1案で。カッコ説明禁止。"
+            ex_str = "\n".join([f"お題：{e['odai']}\n回答：{e['ans']}" for e in st.session_state.golden_examples])
+            p = f"伝説の大喜利回答者として【お題】:{st.session_state.selected_odai}に答えよ。手本:{ex_str}\nルール:回答のみ20個、番号を振り1行1案で。カッコ説明禁止。"
             r = m.generate_content(p)
             ans_raw = [l.strip() for l in r.text.split('\n') if l.strip()][:20]
             st.session_state.ans_list = ans_raw
@@ -204,12 +219,12 @@ if st.session_state.selected_odai:
 
 if st.session_state.ans_list:
     list_len = min(len(st.session_state.ans_list), len(st.session_state.pronounce_list))
-    st.write("### 回答一覧（下の黄色い欄で読み方を修正できます）")
+    st.write("### 回答一覧")
     for i in range(list_len):
         col_t, col_g = st.columns([9, 1])
-        st.session_state.ans_list[i] = col_t.text_input(f"字幕案 {i+1}", value=st.session_state.ans_list[i], key=f"disp_{i}")
-        st.session_state.pronounce_list[i] = st.text_input(f"音声読み修正 {i+1}", value=st.session_state.pronounce_list[i], key=f"pron_{i}", label_visibility="collapsed")
-        st.markdown(f'<p class="pronounce-box">↑ 読み修正（例：なん、いい、_で間を開ける 等）</p>', unsafe_allow_html=True)
+        st.session_state.ans_list[i] = col_t.text_input(f"字幕 {i+1}", value=st.session_state.ans_list[i], key=f"disp_{i}")
+        st.session_state.pronounce_list[i] = st.text_input(f"読み {i+1}", value=st.session_state.pronounce_list[i], key=f"pron_{i}", label_visibility="collapsed")
+        st.markdown(f'<p class="pronounce-box">↑ 読み修正（スペースで改行、_でタメ）</p>', unsafe_allow_html=True)
         
         if col_g.button("生成", key=f"b_{i}"):
             with st.spinner("動画生成中..."):
