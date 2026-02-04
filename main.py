@@ -54,10 +54,8 @@ def build_controlled_audio(full_text, mode="gtts"):
     """アンダースコアを解析して無音を挟んだ音声を構築"""
     parts = re.split(r'(_+)', full_text)
     clips = []
-    
     for i, part in enumerate(parts):
         if not part: continue
-        
         if '_' in part:
             # アンダースコア1つにつき0.1秒の無音を生成
             duration = len(part) * 0.1
@@ -83,6 +81,7 @@ def create_text_image(text, fontsize, color, pos=(960, 540)):
     except:
         return None
     
+    # 映像表示用：アンダースコアを全角スペースにして改行へ変換
     clean_display = text.replace("_", "　")
     display_text = clean_display.replace("　", "\n").replace(" ", "\n")
     
@@ -107,6 +106,7 @@ def create_geki_video(odai, answer):
         video = VideoFileClip(BASE_VIDEO).without_audio()
         clean_ans = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer).strip()
         
+        # テロップ画像生成
         i1 = create_text_image(odai, 100, "black", pos=(960, 530)) 
         i2 = create_text_image(odai, 55, "black", pos=(880, 300))
         i3 = create_text_image(clean_ans, 120, "black", pos=(960, 500))
@@ -115,7 +115,7 @@ def create_geki_video(odai, answer):
         c2 = ImageClip(np.array(i2)).set_start(8.0).set_end(10.0).set_duration(2.0)
         c3 = ImageClip(np.array(i3)).set_start(10.0).set_end(16.0).set_duration(6.0)
 
-        # 音声の連結構築
+        # 音声の物理連結構築
         voice_odai_clip = build_controlled_audio(odai, mode="gtts")
         voice_ans_clip = build_controlled_audio(clean_ans, mode="edge")
 
@@ -150,11 +150,13 @@ with col1:
     st.session_state.kw = st.text_input("KW", value=st.session_state.kw, label_visibility="collapsed")
 with col2:
     if st.button("消去"):
-        st.session_state.kw = ""; st.rerun()
+        st.session_state.kw = ""
+        st.rerun()
 with col3:
     if st.button("ランダム"):
         ws = ["AI", "孫", "無人島", "コンビニ", "サウナ", "SNS"]
-        st.session_state.kw = random.choice(ws); st.rerun()
+        st.session_state.kw = random.choice(ws)
+        st.rerun()
 
 if st.button("お題生成", use_container_width=True):
     with st.spinner("閃き中..."):
@@ -176,12 +178,21 @@ if st.session_state.odais:
 
 if st.session_state.selected_odai:
     st.write("---")
-    st.session_state.selected_odai = st.text_input("お題確定（_で0.5秒のタメ）", value=st.session_state.selected_odai)
-    tone = st.selectbox("ユーモアの種類", ["通常", "知的", "シュール", "ブラック"])
+    st.session_state.selected_odai = st.text_input("お題確定（_で0.1秒のタメ）", value=st.session_state.selected_odai)
+    style_mode = st.selectbox("回答スタイル", ["通常（バラエティ）", "一言（特化）", "普通（特化）", "知的", "シュール", "ブラック"])
+    
     if st.button("回答20案生成", type="primary"):
         with st.spinner("生成中..."):
             m = genai.GenerativeModel(CHOSEN_MODEL)
-            p = f"お題：{st.session_state.selected_odai}\n雰囲気：{tone}\n回答20案。番号を振り1行1案。挨拶不要。"
+            style_prompts = {
+                "通常（バラエティ）": "知的・シュール・ブラックを混ぜ、一言から通常の長さまでバラエティ豊かな回答。ジャンル不問。",
+                "一言（特化）": "知的・シュール・ブラックを含むあらゆるジャンルで、とにかく「15文字以内の短い一言」のみ。",
+                "普通（特化）": "知的・シュール・ブラックを含むあらゆるジャンルで、一言ではない「普通の長さ（20〜40文字程度）」の回答のみ。",
+                "知的": "知的な言い回しや知識を活かした回答。",
+                "シュール": "意味不明で独特な世界観の回答。",
+                "ブラック": "毒気や皮肉の効いたブラックユーモアのある回答。"
+            }
+            p = f"お題：{st.session_state.selected_odai}\n指示：{style_prompts[style_mode]}\n回答20案。番号を振り1行1案。挨拶不要。"
             r = m.generate_content(p)
             ls = [l.strip() for l in r.text.split('\n') if l.strip()]
             st.session_state.ans_list = [l for l in ls if not any(w in l for w in ["はい", "承知"])][:20]
