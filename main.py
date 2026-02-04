@@ -84,7 +84,7 @@ def create_geki_video(odai, answer):
         # 3. 映像タイムライン設定
         c1 = ImageClip(np.array(i1)).set_start(2.0).set_end(8.0).set_duration(6.0)
         c2 = ImageClip(np.array(i2)).set_start(8.0).set_end(10.0).set_duration(2.0)
-        c3 = ImageClip(np.array(i3)).set_start(10.1).set_end(16.0).set_duration(5.9)
+        c3 = ImageClip(np.array(i3)).set_start(11.0).set_end(16.0).set_duration(5.0)
 
         # 4. 音声の多重合成
         # A: ナレーション（2.5s開始、溜めの演出）
