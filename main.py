@@ -78,7 +78,7 @@ def create_geki_video(odai, answer):
         
         # 2. テロップ画像生成
         i1 = create_text_image(odai, 100, "black", pos=(960, 530)) 
-        i2 = create_text_image(odai, 60, "black", pos=(880, 300))
+        i2 = create_text_image(odai, 55, "black", pos=(880, 300))
         i3 = create_text_image(clean_text, 120, "black", pos=(960, 500))
         
         # 3. 映像タイムライン設定（最新タイミング）
