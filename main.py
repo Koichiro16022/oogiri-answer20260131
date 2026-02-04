@@ -24,14 +24,29 @@ SOUND2 = "sound2.mp3"
 
 st.set_page_config(page_title="大喜利アンサー", layout="wide")
 
+# UIデザインのカスタマイズ（入力欄の色と注釈の黒色化）
 st.markdown("""
     <style>
     .main { background-color: #001220; color: #E5E5E5; }
     .stButton>button { width: 100%; border-radius: 5px; font-weight: bold; }
     div.stButton > button:first-child { background: linear-gradient(135deg, #FFD700 0%, #E5E5E5 100%); color: #001220; }
     .stVideo { max-width: 100%; margin: auto; }
+    
+    /* 注釈テキストを黒に変更 */
     .pronounce-box { font-size: 0.8rem; color: black; margin-top: -10px; margin-bottom: 10px; }
     .odai-pronounce { font-size: 0.85rem; color: black; margin-top: -15px; margin-bottom: 10px; }
+    
+    /* 入力欄（テキストエリア含む）の背景色を淡い水色に強制変更 */
+    div[data-baseweb="input"] > div, div[data-baseweb="base-input"] > textarea {
+        background-color: #E1F5FE !important;
+        color: #01579B !important;
+        border-radius: 4px;
+    }
+    /* ラベル文字の視認性向上 */
+    .stTextInput label, .stTextArea label {
+        color: #E5E5E5 !important;
+        font-weight: bold;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -50,7 +65,7 @@ if 'golden_examples' not in st.session_state:
         {"odai": "ハゲてて良かった～なぜそう思った？", "ans": "職質のプロに『君、隠し事なさそうな頭してるね』とスルーされた"},
         {"odai": "ハゲてて良かった～なぜそう思った？", "ans": "美容師さんにお任せでと言ったら3秒で会計が終わった"},
         {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "家族写真のお母さんの顔の部分だけに執拗に『ブサイクになるフィルター』をかけて保存した"},
-        {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "おばさんその服カーテンと同じ柄ですね！と明るく指摘した"},
+        {"odai": "おばさんその服カーテンと同じ柄ですね！と明るく指摘した", "ans": "母親が私の友達に大激怒。いったい何があった？"},
         {"odai": "とある大学のしきたりが1年生は全員激辛ラーメン一気食いだが、ある生徒だけは3年生になってもやらされていた。一体なぜ？", "ans": "あまりにも美味しそうに食べるので店側が『プロモーションビデオ』を撮り続けている"},
         {"odai": "友達と2人で古畑任三郎を観ていて事件を解決した後、友達が必ずする行動とは？", "ans": "今回の犯行手口をChatGPTに入力し、『もっとバレにくい方法』を3案出させる"}
     ]
@@ -153,7 +168,7 @@ with st.sidebar:
 # --- 5. メインUI ---
 st.title("大喜利アンサー")
 kw_col, clr_col, rnd_col = st.columns([5, 1, 1])
-st.session_state.kw = kw_col.text_input("KW", value=st.session_state.kw, label_visibility="collapsed")
+st.session_state.kw = kw_col.text_input("キーワード入力", value=st.session_state.kw, label_visibility="collapsed")
 if clr_col.button("消去"): st.session_state.kw = ""; st.rerun()
 if rnd_col.button("ランダム"): st.session_state.kw = random.choice(["SNS", "古畑任三郎", "母親", "サウナ"]); st.rerun()
 
@@ -180,8 +195,10 @@ if st.session_state.odais:
 
 if st.session_state.selected_odai:
     st.write("---")
+    # お題確定の入力欄
     st.session_state.selected_odai = st.text_input("お題確定（スペースで改行）", value=st.session_state.selected_odai)
-    st.session_state.selected_odai_pron = st.text_input("お題の読み修正（_で喋りの間を作る）", value=st.session_state.selected_odai_pron)
+    # お題読み修正の入力欄
+    st.session_state.selected_odai_pron = st.text_input("お題の読み修正（ _ で喋りの間を作る）", value=st.session_state.selected_odai_pron)
     st.markdown(f'<p class="odai-pronounce">↑ お題の発音修正</p>', unsafe_allow_html=True)
     
     style = st.selectbox("ユーモア", ["通常", "知的", "シュール", "ブラック"])
@@ -208,9 +225,12 @@ if st.session_state.ans_list:
     st.write("### 回答一覧")
     for i in range(min(len(st.session_state.ans_list), len(st.session_state.pronounce_list))):
         col_t, col_g = st.columns([9, 1])
-        st.session_state.ans_list[i] = col_t.text_input(f"字幕 {i+1}", value=st.session_state.ans_list[i], key=f"disp_{i}")
-        st.session_state.pronounce_list[i] = st.text_input(f"読み {i+1}", value=st.session_state.pronounce_list[i], key=f"pron_{i}", label_visibility="collapsed")
+        # 字幕入力欄
+        st.session_state.ans_list[i] = col_t.text_input(f"字幕案 {i+1}（スペースで改行）", value=st.session_state.ans_list[i], key=f"disp_{i}")
+        # 読み修正入力欄
+        st.session_state.pronounce_list[i] = st.text_input(f"読み案 {i+1}（ _ で喋りの間を作る）", value=st.session_state.pronounce_list[i], key=f"pron_{i}", label_visibility="collapsed")
         st.markdown(f'<p class="pronounce-box">↑ 読み修正</p>', unsafe_allow_html=True)
+        
         if col_g.button("生成", key=f"b_{i}"):
             with st.spinner("動画生成中..."):
                 path = create_geki_video(st.session_state.selected_odai, st.session_state.selected_odai_pron, st.session_state.ans_list[i], st.session_state.pronounce_list[i])
