@@ -92,9 +92,12 @@ def create_text_image(text, fontsize, color, pos=(960, 540)):
     draw = ImageDraw.Draw(img)
     try: font = ImageFont.truetype(FONT_PATH, fontsize)
     except: return None
-    clean_display = text.replace("_", "　")
+    
+    # ★修正: 音声制御用の_を字幕には表示しない。全角/半角スペースのみを改行に変換。
+    clean_display = text.replace("_", "")
     display_text = clean_display.replace("　", "\n").replace(" ", "\n")
     lines = display_text.split("\n")
+    
     line_spacing = 15
     line_heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
     total_height = sum(line_heights) + (len(lines) - 1) * line_spacing
@@ -111,11 +114,10 @@ def create_geki_video(odai, answer_display, answer_audio):
         if not os.path.exists(f): return None
     try:
         video = VideoFileClip(BASE_VIDEO).without_audio()
-        # 字幕案と音声読み上げを分離
         clean_display = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer_display).strip()
         clean_audio = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer_audio).strip()
         
-        # 修正：clean_display（字幕案）を映像合成に渡す
+        # 画像生成
         i1 = create_text_image(odai, 100, "black", pos=(960, 530)) 
         i2 = create_text_image(odai, 55, "black", pos=(880, 300))
         i3 = create_text_image(clean_display, 120, "black", pos=(960, 500))
@@ -124,8 +126,8 @@ def create_geki_video(odai, answer_display, answer_audio):
         c2 = ImageClip(np.array(i2)).set_start(8.0).set_end(10.0).set_duration(2.0)
         c3 = ImageClip(np.array(i3)).set_start(10.0).set_end(16.0).set_duration(6.0)
         
+        # 音声生成
         voice_odai_clip = build_controlled_audio(odai, mode="gtts")
-        # 修正：clean_audio（発音用）を音声合成に渡す
         voice_ans_clip = build_controlled_audio(clean_audio, mode="edge")
         
         audio_list = []
@@ -135,7 +137,10 @@ def create_geki_video(odai, answer_display, answer_audio):
         s2_audio = AudioFileClip(SOUND2).set_start(9.0).volumex(0.3)
         audio_list.extend([s1_audio, s2_audio])
         
-        final = video.set_audio(CompositeAudioClip(audio_list))
+        # 映像・音声合成
+        video_composite = CompositeVideoClip([video, c1, c2, c3], size=(1920, 1080))
+        final = video_composite.set_audio(CompositeAudioClip(audio_list))
+        
         out = "geki.mp4"
         final.write_videofile(out, fps=24, codec="libx264", audio_codec="aac", remove_temp=True)
         video.close(); final.close()
@@ -143,7 +148,7 @@ def create_geki_video(odai, answer_display, answer_audio):
     except Exception as e:
         st.error(f"合成失敗: {e}"); return None
 
-# --- 4. サイドバー ---
+# --- 4. サイドバー（重複防止機能つき） ---
 with st.sidebar:
     st.header("🧠 感性同期・追加学習")
     with st.form("learning_form", clear_on_submit=True):
@@ -151,9 +156,18 @@ with st.sidebar:
         new_ans = st.text_input("回答を追加")
         if st.form_submit_button("感性を覚えさせる"):
             if new_odai and new_ans:
-                st.session_state.golden_examples.append({"odai": new_odai, "ans": new_ans})
-                st.success("お題と回答を登録しました。")
+                is_duplicate = any(ex["odai"] == new_odai and ex["ans"] == new_ans for ex in st.session_state.golden_examples)
+                if not is_duplicate:
+                    st.session_state.golden_examples.append({"odai": new_odai, "ans": new_ans})
+                    st.success("お題と回答を登録しました。")
+                else:
+                    st.warning("その内容は既に登録済みです。")
     st.write(f"### 学習済みリスト ({len(st.session_state.golden_examples)}件)")
+    for i, ex in enumerate(reversed(st.session_state.golden_examples)):
+        idx = len(st.session_state.golden_examples) - i
+        with st.expander(f"傑作 {idx}"):
+            st.write(f"**お題**: {ex['odai']}")
+            st.write(f"**回答**: {ex['ans']}")
 
 # --- 5. メインUI ---
 st.title("大喜利アンサー")
@@ -194,12 +208,15 @@ if st.session_state.ans_list:
         col_t, col_g = st.columns([9, 1])
         st.session_state.ans_list[i] = col_t.text_input(f"字幕案 {i+1}", value=st.session_state.ans_list[i], key=f"disp_{i}")
         st.session_state.pronounce_list[i] = st.text_input(f"音声読み修正 {i+1}", value=st.session_state.pronounce_list[i], key=f"pron_{i}", label_visibility="collapsed")
-        st.markdown(f'<p class="pronounce-box">↑ 読み修正（例：なんていった、いい、よい 等）</p>', unsafe_allow_html=True)
+        st.markdown(f'<p class="pronounce-box">↑ 読み修正（例：なん、いい、_で間を開ける 等）</p>', unsafe_allow_html=True)
         
         if col_g.button("生成", key=f"b_{i}"):
             with st.spinner("動画生成中..."):
                 path = create_geki_video(st.session_state.selected_odai, st.session_state.ans_list[i], st.session_state.pronounce_list[i])
-                if path: st.video(path)
+                if path:
+                    st.video(path)
+                    with open(path, "rb") as f:
+                        st.download_button("保存", f, file_name=f"geki_{i}.mp4", key=f"dl_{i}")
 
 st.write("---")
 st.caption("「私が100%制御しています」")
