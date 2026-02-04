@@ -42,8 +42,8 @@ if 'selected_odai' not in st.session_state: st.session_state.selected_odai = ""
 if 'ans_list' not in st.session_state: st.session_state.ans_list = []
 
 # --- 3. 音声生成用ヘルパー (edge-tts 非同期) ---
-async def save_edge_voice(text, filename, voice_name):
-    communicate = edge_tts.Communicate(text, voice_name)
+async def save_edge_voice(text, filename, voice_name, rate="+15%"):
+    communicate = edge_tts.Communicate(text, voice_name, rate=rate)
     await communicate.save(filename)
 
 # --- 4. 動画合成ロジック ---
@@ -83,11 +83,15 @@ def create_geki_video(odai, answer):
         c3 = ImageClip(np.array(i3)).set_start(10.0).set_end(16.0).set_duration(6.0)
 
         # 音声生成
+        # お題: gTTS (自然な女性)
         tts_odai = gTTS(odai, lang='ja')
         tts_odai.save("tmp_odai.mp3")
         voice_odai = AudioFileClip("tmp_odai.mp3").set_start(2.5)
-        asyncio.run(save_edge_voice(clean_text, "tmp_ans.mp3", "ja-JP-KeitaNeural"))
+
+        # 回答: edge-tts (男性・圭太) 速度+15%
+        asyncio.run(save_edge_voice(clean_text, "tmp_ans.mp3", "ja-JP-KeitaNeural", rate="+15%"))
         voice_ans = AudioFileClip("tmp_ans.mp3").set_start(10.5)
+
         s1_audio = AudioFileClip(SOUND1).set_start(0.8)
         s2_audio = AudioFileClip(SOUND2).set_start(9.0)
         
