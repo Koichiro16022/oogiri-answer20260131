@@ -147,32 +147,9 @@ with col1:
     st.session_state.kw = st.text_input("KW", value=st.session_state.kw, label_visibility="collapsed")
 with col2:
     if st.button("消去"):
-        st.session_state.kw = ""; st.rerun()
+        st.session_state.kw = ""
+        st.rerun()
 with col3:
     if st.button("ランダム"):
         ws = ["AI", "孫", "無人島", "コンビニ", "サウナ", "SNS"]
-        st.session_state.kw = random.choice(ws); st.rerun()
-
-if st.button("お題生成", use_container_width=True):
-    with st.spinner("閃き中..."):
-        m = genai.GenerativeModel(CHOSEN_MODEL)
-        prompt = f"「{st.session_state.kw}」テーマの大喜利お題（IPPON風）を3つ、改行のみ。挨拶不要。"
-        r = m.generate_content(prompt)
-        st.session_state.odais = [l.strip() for l in r.text.split('\n') if l.strip()][:3]
-        st.session_state.selected_odai = ""
-        st.session_state.ans_list = []
-        st.rerun()
-
-if st.session_state.odais:
-    st.write("### お題を選択してください")
-    for i, o in enumerate(st.session_state.odais):
-        if st.button(o, key=f"o_btn_{i}"):
-            st.session_state.selected_odai = o
-            st.session_state.ans_list = []
-            st.rerun()
-
-if st.session_state.selected_odai:
-    st.write("---")
-    st.session_state.selected_odai = st.text_input(
-        "お題確定（改行箇所にスペースを入れてください）", 
-        value=st.session_state.selected_
+        st.
