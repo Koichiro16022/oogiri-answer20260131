@@ -17,8 +17,8 @@ else:
 CHOSEN_MODEL = 'models/gemini-2.0-flash'
 FONT_PATH = "NotoSansJP-Bold.ttf"
 BASE_VIDEO = "template.mp4"
-SOUND1 = "sound1.mp3"  # お題直前の効果音 (1.5s)
-SOUND2 = "sound2.mp3"  # モニター・回答誘導の効果音 (8.0s)
+SOUND1 = "sound1.mp3"  # お題直前の効果音 (0.8s)
+SOUND2 = "sound2.mp3"  # モニター・回答誘導の効果音 (9.0s)
 
 # レイアウト設定
 st.set_page_config(page_title="大喜利アンサー", layout="centered")
@@ -76,31 +76,36 @@ def create_geki_video(odai, answer):
         video = VideoFileClip(BASE_VIDEO).without_audio()
         clean_text = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer).strip()
         
-        # 2. テロップ画像生成（確定座標）
+        # 2. テロップ画像生成
         i1 = create_text_image(odai, 100, "black", pos=(960, 530)) 
         i2 = create_text_image(odai, 60, "black", pos=(880, 300))
         i3 = create_text_image(clean_text, 120, "black", pos=(960, 500))
         
-        # 3. 映像タイムライン設定
+        # 3. 映像タイムライン設定（最新タイミング）
         c1 = ImageClip(np.array(i1)).set_start(2.0).set_end(8.0).set_duration(6.0)
         c2 = ImageClip(np.array(i2)).set_start(8.0).set_end(10.0).set_duration(2.0)
         c3 = ImageClip(np.array(i3)).set_start(10.0).set_end(16.0).set_duration(6.0)
 
         # 4. 音声の多重合成
-        # A: ナレーション（2.5s開始、溜めの演出）
-        txt = f"{odai}。、、{clean_text}" 
-        tts = gTTS(txt, lang='ja')
-        tts.save("tmp_voice.mp3")
-        voice_audio = AudioFileClip("tmp_voice.mp3").set_start(2.5)
+        # A: お題のナレーション（2.5s開始）
+        tts_odai = gTTS(odai, lang='ja')
+        tts_odai.save("tmp_odai.mp3")
+        voice_odai = AudioFileClip("tmp_odai.mp3").set_start(2.5)
         
-        # B: 効果音1（1.5s：お題直前の予兆）
+        # B: 回答のナレーション（10.5s開始：文字が出て少ししたタイミング）
+        # ※gTTS単体では男性指定ができないため、分離して個別に制御
+        tts_ans = gTTS(clean_text, lang='ja')
+        tts_ans.save("tmp_ans.mp3")
+        voice_ans = AudioFileClip("tmp_ans.mp3").set_start(10.5)
+        
+        # C: 効果音1（0.8s：お題直前）
         s1_audio = AudioFileClip(SOUND1).set_start(0.8)
         
-        # C: 効果音2（8.0s：回答への視線誘導）
+        # D: 効果音2（9.0s：回答誘導）
         s2_audio = AudioFileClip(SOUND2).set_start(9.0)
         
-        # ミックス
-        combined_audio = CompositeAudioClip([voice_audio, s1_audio, s2_audio])
+        # すべてミックス
+        combined_audio = CompositeAudioClip([voice_odai, voice_ans, s1_audio, s2_audio])
         
         # 5. 最終合成
         video_composite = CompositeVideoClip([video, c1, c2, c3], size=(1920, 1080))
@@ -119,7 +124,8 @@ def create_geki_video(odai, answer):
         
         # 7. リソース解放
         video.close()
-        voice_audio.close()
+        voice_odai.close()
+        voice_ans.close()
         s1_audio.close()
         s2_audio.close()
         final.close()
