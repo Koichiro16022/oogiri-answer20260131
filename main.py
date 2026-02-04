@@ -94,7 +94,7 @@ def create_geki_video(odai, answer):
         voice_audio = AudioFileClip("tmp_voice.mp3").set_start(2.5)
         
         # B: 効果音1（1.5s：お題直前の予兆）
-        s1_audio = AudioFileClip(SOUND1).set_start(1.2)
+        s1_audio = AudioFileClip(SOUND1).set_start(1.0)
         
         # C: 効果音2（8.0s：回答への視線誘導）
         s2_audio = AudioFileClip(SOUND2).set_start(8.0)
