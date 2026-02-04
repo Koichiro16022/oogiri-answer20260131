@@ -97,7 +97,7 @@ def create_geki_video(odai, answer):
         s1_audio = AudioFileClip(SOUND1).set_start(0.8)
         
         # C: 効果音2（8.0s：回答への視線誘導）
-        s2_audio = AudioFileClip(SOUND2).set_start(8.5)
+        s2_audio = AudioFileClip(SOUND2).set_start(9.0)
         
         # ミックス
         combined_audio = CompositeAudioClip([voice_audio, s1_audio, s2_audio])
