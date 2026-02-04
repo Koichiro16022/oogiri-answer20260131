@@ -5,3 +5,4 @@ moviepy
 gTTS
 edge-tts
 pydub
+pyaudioop
