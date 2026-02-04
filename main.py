@@ -30,8 +30,8 @@ st.markdown("""
     .stButton>button { width: 100%; border-radius: 5px; font-weight: bold; }
     div.stButton > button:first-child { background: linear-gradient(135deg, #FFD700 0%, #E5E5E5 100%); color: #001220; }
     .stVideo { max-width: 100%; margin: auto; }
-    .pronounce-box { font-size: 0.8rem; color: #FFD700; margin-top: -10px; margin-bottom: 10px; }
-    .odai-pronounce { font-size: 0.85rem; color: #00FFCC; margin-top: -15px; margin-bottom: 10px; }
+    .pronounce-box { font-size: 0.8rem; color: black; margin-top: -10px; margin-bottom: 10px; }
+    .odai-pronounce { font-size: 0.85rem; color: black; margin-top: -15px; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
