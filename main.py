@@ -92,7 +92,9 @@ def create_geki_video(odai, answer):
         asyncio.run(save_edge_voice(clean_text, "tmp_ans.mp3", "ja-JP-KeitaNeural", rate="+15%"))
         voice_ans = AudioFileClip("tmp_ans.mp3").set_start(10.5)
 
-        s1_audio = AudioFileClip(SOUND1).set_start(0.8)
+        # C: 効果音1（0.8s：お題直前）
+        # .volumex(0.5) を追加することで音量を50%に下げます
+        s1_audio = AudioFileClip(SOUND1).set_start(0.8).volumex(0.5)
         s2_audio = AudioFileClip(SOUND2).set_start(9.0)
         
         combined_audio = CompositeAudioClip([voice_odai, voice_ans, s1_audio, s2_audio])
