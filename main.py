@@ -41,7 +41,6 @@ st.markdown("""
         color: #01579B !important;
         font-size: 1rem !important;
         font-weight: 800 !important;
-        text-shadow: 1px 1px 2px #000000;
         margin-bottom: 5px;
     }
 
