@@ -24,7 +24,7 @@ SOUND2 = "sound2.mp3"
 
 st.set_page_config(page_title="大喜利アンサー", layout="wide")
 
-# UIデザインのカスタマイズ（視認性重視）
+# UIデザインのカスタマイズ
 st.markdown("""
     <style>
     .main { background-color: #001220; color: #E5E5E5; }
@@ -33,8 +33,8 @@ st.markdown("""
     .stVideo { max-width: 100%; margin: auto; }
     
     /* 注釈テキスト（黒） */
-    .pronounce-box { font-size: 0.8rem; color: black; margin-top: -10px; margin-bottom: 10px; }
-    .odai-pronounce { font-size: 0.85rem; color: black; margin-top: -15px; margin-bottom: 10px; }
+    .pronounce-box { font-size: 0.8rem; color: black !important; margin-top: -10px; margin-bottom: 10px; }
+    .odai-pronounce { font-size: 0.85rem; color: black !important; margin-top: -15px; margin-bottom: 10px; }
     
     /* 入力欄のラベル（説明文）を白く太くして見やすくする */
     .stTextInput label, .stTextArea label {
@@ -62,7 +62,6 @@ if 'selected_odai_pron' not in st.session_state: st.session_state.selected_odai_
 if 'ans_list' not in st.session_state: st.session_state.ans_list = []
 if 'pronounce_list' not in st.session_state: st.session_state.pronounce_list = []
 
-# 初期学習データ
 if 'golden_examples' not in st.session_state:
     st.session_state.golden_examples = [
         {"odai": "目に入れても痛くない孫におじいちゃんがブチギレ。いったい何があった？", "ans": "おじいちゃんの入れ歯をメルカリで『ビンテージ雑貨』として出品していた"},
@@ -166,4 +165,58 @@ st.session_state.kw = kw_col.text_input("キーワード入力", value=st.sessio
 if clr_col.button("消去"): st.session_state.kw = ""; st.rerun()
 if rnd_col.button("ランダム"): st.session_state.kw = random.choice(["SNS", "古畑任三郎", "母親", "サウナ"]); st.rerun()
 
-if st.button("お題
+if st.button("お題生成", use_container_width=True):
+    with st.spinner("厳選中..."):
+        m = genai.GenerativeModel(CHOSEN_MODEL)
+        prompt = f"キーワード「{st.session_state.kw}」を使った大喜利お題を3つ。説明不要。3行で。"
+        r = m.generate_content(prompt)
+        st.session_state.odais = [re.sub(r'^[\d\.．\s]+', '', l).strip() for l in r.text.split('\n') if l.strip()][:3]
+        st.session_state.selected_odai = ""; st.session_state.ans_list = []; st.rerun()
+
+if st.session_state.odais:
+    for i, o in enumerate(st.session_state.odais):
+        if st.button(o, key=f"o_{i}"): 
+            st.session_state.selected_odai = o
+            st.session_state.selected_odai_pron = o
+            st.session_state.ans_list = []; st.rerun()
+
+if st.session_state.selected_odai:
+    st.write("---")
+    # お題確定の入力欄
+    st.session_state.selected_odai = st.text_input("お題確定（スペースで改行）", value=st.session_state.selected_odai)
+    # お題読み修正の入力欄
+    st.session_state.selected_odai_pron = st.text_input("お題の読み修正（ _ で無音のタメ）", value=st.session_state.selected_odai_pron)
+    st.markdown(f'<p class="odai-pronounce">↑ お題の発音修正</p>', unsafe_allow_html=True)
+    
+    style = st.selectbox("ユーモア", ["通常", "知的", "シュール", "ブラック"])
+    if st.button("回答20案生成", type="primary"):
+        with st.spinner("爆笑を追求中..."):
+            m = genai.GenerativeModel(CHOSEN_MODEL)
+            ex_str = "\n".join([f"・{e['ans']}" for e in st.session_state.golden_examples])
+            p = f"""あなたは伝説の大喜利芸人です。挨拶・前置き厳禁。
+            お題: {st.session_state.selected_odai}
+            手本: {ex_str}
+            指示: 20個の回答を「1. 回答」形式で。"""
+            r = m.generate_content(p)
+            ans_raw = [l.strip() for l in r.text.split('\n') if re.match(r'^\d+[\.．、。\s]', l)][:20]
+            st.session_state.ans_list = ans_raw
+            st.session_state.pronounce_list = ans_raw[:]
+            st.rerun()
+
+if st.session_state.ans_list:
+    st.write("### 回答一覧")
+    for i in range(len(st.session_state.ans_list)):
+        col_t, col_g = st.columns([9, 1])
+        st.session_state.ans_list[i] = col_t.text_input(f"字幕案 {i+1}（スペースで改行）", value=st.session_state.ans_list[i], key=f"disp_{i}")
+        st.session_state.pronounce_list[i] = st.text_input(f"読み案 {i+1}（ _ で無音のタメ）", value=st.session_state.pronounce_list[i], key=f"pron_{i}", label_visibility="collapsed")
+        st.markdown(f'<p class="pronounce-box">↑ 読み修正</p>', unsafe_allow_html=True)
+        if col_g.button("生成", key=f"b_{i}"):
+            with st.spinner("動画生成中..."):
+                path = create_geki_video(st.session_state.selected_odai, st.session_state.selected_odai_pron, st.session_state.ans_list[i], st.session_state.pronounce_list[i])
+                if path:
+                    st.video(path)
+                    with open(path, "rb") as f:
+                        st.download_button("保存", f, file_name=f"geki_{i}.mp4", key=f"dl_{i}")
+
+st.write("---")
+st.caption("「私が100%制御しています」")
