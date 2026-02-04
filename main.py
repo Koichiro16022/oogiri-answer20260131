@@ -47,17 +47,15 @@ async def save_edge_voice(text, filename, voice_name, rate="+15%"):
     await communicate.save(filename)
 
 def make_silence(duration):
-    """MoviePy純正の機能で無音クリップを作成"""
     return AudioClip(lambda t: [0, 0], duration=duration, fps=44100)
 
 def build_controlled_audio(full_text, mode="gtts"):
-    """アンダースコアを解析して無音を挟んだ音声を構築"""
     parts = re.split(r'(_+)', full_text)
     clips = []
     for i, part in enumerate(parts):
         if not part: continue
         if '_' in part:
-            duration = len(part) * 0.1 # 0.1秒単位のタメ
+            duration = len(part) * 0.1
             clips.append(make_silence(duration))
         else:
             tmp_filename = f"part_{mode}_{i}.mp3"
@@ -124,7 +122,25 @@ def create_geki_video(odai, answer):
     except Exception as e:
         st.error(f"合成失敗: {e}"); return None
 
-# --- 5. UI ---
+# --- 5. 【100%制御】黄金の回答リスト（1/31当時の傑作選：感性同期の核） ---
+GOLDEN_EXAMPLES = [
+    {"odai": "目に入れても痛くない孫におじいちゃんがブチギレ。いったい何があった？", "ans": "おじいちゃんの入れ歯をメルカリで『ビンテージ雑貨』として出品していた"},
+    {"odai": "この番組絶対ドッキリだろ！なぜ気付いた？", "ans": "通行人10人全員がよく見たらエキストラのバイト募集で見かけた顔だった"},
+    {"odai": "ハゲてて良かった～なぜそう思った？", "ans": "職質のプロに『君、隠し事なさそうな頭してるね』とスルーされた"},
+    {"odai": "ハゲてて良かった～なぜそう思った？", "ans": "美容師さんにお任せでと言ったら3秒で会計が終わった"},
+    {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "家族写真のお母さんの顔の部分だけに執拗に『ブサイクになるフィルター』をかけて保存した"},
+    {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "お母さんが大切にしている観葉植物を、勝手にメルカリで売れたんでと梱包し始めた"},
+    {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "おばさんその服カーテンと同じ柄ですね！と明るく指摘した"},
+    {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "お母さんの寝顔を勝手に撮影して#化け物 #拡散希望でアップしようとしていた"},
+    {"odai": "とある大学のしきたりが1年生は全員激辛ラーメン一気食いだが、ある生徒だけは3年生になってもやらされていた。一体なぜ？", "ans": "あまりにも美味しそうに食べるので店側が『プロモーションビデオ』を撮り続けている"},
+    {"odai": "とある大学のしきたりが1年生は全員激辛ラーメン一気食いだが、ある生徒だけは3年生になってもやらされていた。一体なぜ？", "ans": "激辛ラーメンを完食するまでが入学式というルールだがまだ一口も飲み込めていない"},
+    {"odai": "とある大学のしきたりが1年生は全員激辛ラーメン一気食いだが、ある生徒だけは3年生になってもやらされていた。一体なぜ？", "ans": "『激辛ラーメン一気食い部』という世界で一番不毛な部活の部長になったから"},
+    {"odai": "友達と2人で古畑任三郎を観ていて事件を解決した後、友達が必ずする行動とは？", "ans": "今回の犯行手口をChatGPTに入力し、『もっとバレにくい方法』を3案出させる"},
+    {"odai": "友達と2人で古畑任三郎を観ていて事件を解決した後、友達が必ずする行動とは？", "ans": "真っ暗な部屋でおでこに人差し指を当てたままルンバの後をずっと追いかける"},
+    {"odai": "友達と2人で古畑任三郎を観ていて事件を解決した後、友達が必ずする行動とは？", "ans": "警察の鑑識並みの手際で部屋に残った私の指紋をすべて拭き取り始める"}
+]
+
+# --- 6. UI ---
 st.subheader("キーワード")
 col1, col2, col3 = st.columns([5, 1.5, 1.5])
 with col1:
@@ -140,16 +156,7 @@ with col3:
 if st.button("お題生成", use_container_width=True):
     with st.spinner("閃き中..."):
         m = genai.GenerativeModel(CHOSEN_MODEL)
-        # 01/31のモックアップにあったお題の切り口をGeminiに学習させる
-        prompt = f"""
-        キーワード「{st.session_state.kw}」を使って、大喜利のお題を3つ作成せよ。
-        【切り口の例】:
-        - 「AIすぎる{st.session_state.kw}」のバグ
-        - 「100年後の{st.session_state.kw}」の新機能
-        - 「世界一やる気のない{st.session_state.kw}」の行動
-        
-        挨拶は不要。お題のみを3行で出力せよ。
-        """
+        prompt = f"「{st.session_state.kw}」をテーマに、思わず回答したくなる鋭い大喜利お題を3つ作成せよ。挨拶不要、お題のみを3行で。"
         r = m.generate_content(prompt)
         st.session_state.odais = [l.strip() for l in r.text.split('\n') if l.strip()][:3]
         st.session_state.selected_odai = ""; st.session_state.ans_list = []; st.rerun()
@@ -166,24 +173,27 @@ if st.session_state.selected_odai:
     style_mode = st.selectbox("ユーモアの種類", ["通常", "知的", "シュール", "ブラック"])
     
     if st.button("回答20案生成", type="primary"):
-        with st.spinner("生成中..."):
+        with st.spinner("魂の20案を捻り出し中..."):
             m = genai.GenerativeModel(CHOSEN_MODEL)
-            # 01/31時点の面白さを取り戻すための「大喜利作家」プロンプト
+            examples_str = "\n".join([f"お題：{ex['odai']}\n回答：{ex['ans']}" for ex in GOLDEN_EXAMPLES])
             style_prompts = {
-                "通常": "自由な発想で。最も爆笑を誘うボケを優先してください。",
-                "知的": "教養、科学、文学、哲学を織り交ぜた、唸るほど巧いインテリなボケ。",
-                "シュール": "独特な角度から攻める、中毒性のある不条理なボケ。",
-                "ブラック": "人間の闇や社会の皮肉を突き、冷や汗が出るほど鋭い毒舌ボケ。"
+                "通常": "自由な発想で、最も爆笑を誘うボケを優先せよ。",
+                "知的": "教養、専門用語、文学的表現などを用いたインテリなボケ。",
+                "シュール": "不条理で独特な空気感を持つ、中毒性のあるボケ。",
+                "ブラック": "人間の闇や社会の皮肉を突く、鋭い毒舌ボケ。"
             }
             p = f"""
-            あなたは伝説的な大喜利作家です。
+            あなたは『ノブロックTV』の放送作家兼、伝説的な大喜利回答者です。
             【お題】: {st.session_state.selected_odai}
             【スタイル】: {style_prompts[style_mode]}
-            
-            【制作ルール】
-            1. 無難な回答はゴミ箱に捨てろ。製作初期の「キレ」を完全に取り戻せ。
-            2. 回答は一言のキレ味を大事にしつつ、必要なら情景が浮かぶ長文も混ぜよ。
-            3. 解説、挨拶、「承知しました」は一切禁止。
+
+            【過去の最高傑作（これらを絶対的な手本にせよ）】
+            {examples_str}
+
+            【製作ルール】
+            1. 1/31当時のキレを完全に取り戻せ。無難な回答はゴミ箱へ。
+            2. 具体的な固有名詞（メルカリ、ルンバ、PV、ChatGPT等）や生々しい行動描写を多用せよ。
+            3. 解説、挨拶、説明口調は一切禁止。
             4. 回答のみを20個、1. 2. 3. と番号を振り、1行1案で出力せよ。
             """
             r = m.generate_content(p)
