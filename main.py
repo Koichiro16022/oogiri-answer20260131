@@ -60,7 +60,7 @@ def build_controlled_audio(full_text, mode="gtts"):
         
         if '_' in part:
             # アンダースコア1つにつき0.5秒の無音を生成
-            duration = len(part) * 0.5
+            duration = len(part) * 0.2
             clips.append(make_silence(duration))
         else:
             tmp_filename = f"part_{mode}_{i}.mp3"
