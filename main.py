@@ -57,8 +57,7 @@ def build_controlled_audio(full_text, mode="gtts"):
     for i, part in enumerate(parts):
         if not part: continue
         if '_' in part:
-            # アンダースコア1つにつき0.1秒の無音を生成
-            duration = len(part) * 0.1
+            duration = len(part) * 0.1 # 0.1秒単位のタメ
             clips.append(make_silence(duration))
         else:
             tmp_filename = f"part_{mode}_{i}.mp3"
@@ -68,7 +67,6 @@ def build_controlled_audio(full_text, mode="gtts"):
             else:
                 asyncio.run(save_edge_voice(part, tmp_filename, "ja-JP-KeitaNeural", rate="+15%"))
             clips.append(AudioFileClip(tmp_filename))
-            
     if not clips: return None
     return concatenate_audioclips(clips)
 
@@ -142,7 +140,16 @@ with col3:
 if st.button("お題生成", use_container_width=True):
     with st.spinner("閃き中..."):
         m = genai.GenerativeModel(CHOSEN_MODEL)
-        prompt = f"「{st.session_state.kw}」テーマの大喜利お題（IPPON風）を3つ、改行のみ。挨拶不要。"
+        # 01/31のモックアップにあったお題の切り口をGeminiに学習させる
+        prompt = f"""
+        キーワード「{st.session_state.kw}」を使って、大喜利のお題を3つ作成せよ。
+        【切り口の例】:
+        - 「AIすぎる{st.session_state.kw}」のバグ
+        - 「100年後の{st.session_state.kw}」の新機能
+        - 「世界一やる気のない{st.session_state.kw}」の行動
+        
+        挨拶は不要。お題のみを3行で出力せよ。
+        """
         r = m.generate_content(prompt)
         st.session_state.odais = [l.strip() for l in r.text.split('\n') if l.strip()][:3]
         st.session_state.selected_odai = ""; st.session_state.ans_list = []; st.rerun()
@@ -156,23 +163,32 @@ if st.session_state.odais:
 if st.session_state.selected_odai:
     st.write("---")
     st.session_state.selected_odai = st.text_input("お題確定（_で0.1秒のタメ）", value=st.session_state.selected_odai)
-    # 選択肢を初期の4種類に集約
     style_mode = st.selectbox("ユーモアの種類", ["通常", "知的", "シュール", "ブラック"])
     
     if st.button("回答20案生成", type="primary"):
         with st.spinner("生成中..."):
             m = genai.GenerativeModel(CHOSEN_MODEL)
-            # 製作初期の「キレ」を重視したプロンプトへ回帰
+            # 01/31時点の面白さを取り戻すための「大喜利作家」プロンプト
             style_prompts = {
-                "通常": "自由な発想で。最も面白い回答を優先してください。",
-                "知的": "教養、専門用語、文学的表現などを用いた、ひねりのあるインテリな回答。",
-                "シュール": "独特な角度から攻める、中毒性のある不条理な回答。",
-                "ブラック": "毒気や皮肉の効いた、ギリギリを攻めるブラックユーモアのある回答。"
+                "通常": "自由な発想で。最も爆笑を誘うボケを優先してください。",
+                "知的": "教養、科学、文学、哲学を織り交ぜた、唸るほど巧いインテリなボケ。",
+                "シュール": "独特な角度から攻める、中毒性のある不条理なボケ。",
+                "ブラック": "人間の闇や社会の皮肉を突き、冷や汗が出るほど鋭い毒舌ボケ。"
             }
-            p = f"お題：{st.session_state.selected_odai}\n雰囲気：{style_prompts[style_mode]}\n回答20案。番号を振り1行1案。余計な挨拶や解説は一切不要。面白さのみを追求せよ。"
+            p = f"""
+            あなたは伝説的な大喜利作家です。
+            【お題】: {st.session_state.selected_odai}
+            【スタイル】: {style_prompts[style_mode]}
+            
+            【制作ルール】
+            1. 無難な回答はゴミ箱に捨てろ。製作初期の「キレ」を完全に取り戻せ。
+            2. 回答は一言のキレ味を大事にしつつ、必要なら情景が浮かぶ長文も混ぜよ。
+            3. 解説、挨拶、「承知しました」は一切禁止。
+            4. 回答のみを20個、1. 2. 3. と番号を振り、1行1案で出力せよ。
+            """
             r = m.generate_content(p)
             ls = [l.strip() for l in r.text.split('\n') if l.strip()]
-            st.session_state.ans_list = [l for l in ls if not any(w in l for w in ["はい", "承知", "紹介", "こちら"])][:20]
+            st.session_state.ans_list = [l for l in ls if not any(w in l for w in ["はい", "承知", "こちら", "紹介"])][:20]
             st.rerun()
 
 if st.session_state.ans_list:
