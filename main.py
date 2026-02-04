@@ -19,8 +19,8 @@ else:
 CHOSEN_MODEL = 'models/gemini-2.0-flash'
 FONT_PATH = "NotoSansJP-Bold.ttf"
 BASE_VIDEO = "template.mp4"
-SOUND1 = "sound1.mp3"  # お題直前 (0.8s)
-SOUND2 = "sound2.mp3"  # 回答誘導 (9.0s)
+SOUND1 = "sound1.mp3"
+SOUND2 = "sound2.mp3"
 
 st.set_page_config(page_title="大喜利アンサー", layout="wide")
 
@@ -30,16 +30,19 @@ st.markdown("""
     .stButton>button { width: 100%; border-radius: 5px; font-weight: bold; }
     div.stButton > button:first-child { background: linear-gradient(135deg, #FFD700 0%, #E5E5E5 100%); color: #001220; }
     .stVideo { max-width: 100%; margin: auto; }
+    /* 発音入力欄を目立たせる */
+    .pronounce-box { font-size: 0.8rem; color: #FFD700; margin-top: -10px; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. 状態管理（学習データ含む） ---
+# --- 2. 状態管理 ---
 if 'kw' not in st.session_state: st.session_state.kw = "SNS"
 if 'odais' not in st.session_state: st.session_state.odais = []
 if 'selected_odai' not in st.session_state: st.session_state.selected_odai = ""
 if 'ans_list' not in st.session_state: st.session_state.ans_list = []
+# 発音（読み）を保持するリスト
+if 'pronounce_list' not in st.session_state: st.session_state.pronounce_list = []
 
-# 初期学習データ（1/31当時の傑作選）
 if 'golden_examples' not in st.session_state:
     st.session_state.golden_examples = [
         {"odai": "目に入れても痛くない孫におじいちゃんがブチギレ。いったい何があった？", "ans": "おじいちゃんの入れ歯をメルカリで『ビンテージ雑貨』として出品していた"},
@@ -47,7 +50,7 @@ if 'golden_examples' not in st.session_state:
         {"odai": "ハゲてて良かった～なぜそう思った？", "ans": "職質のプロに『君、隠し事なさそうな頭してるね』とスルーされた"},
         {"odai": "ハゲてて良かった～なぜそう思った？", "ans": "美容師さんにお任せでと言ったら3秒で会計が終わった"},
         {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "家族写真のお母さんの顔の部分だけに執拗に『ブサイクになるフィルター』をかけて保存した"},
-        {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "お母さんが大切にしている観葉植物を、勝手にメルカリで売れたんでと梱包し始めた"},
+        {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "お母さんが大切にしている観葉植物を勝手にメルカリで売れたんでと梱包し始めた"},
         {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "おばさんその服カーテンと同じ柄ですね！と明るく指摘した"},
         {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "お母さんの寝顔を勝手に撮影して#化け物 #拡散希望でアップしようとしていた"},
         {"odai": "とある大学のしきたりが1年生は全員激辛ラーメン一気食いだが、ある生徒だけは3年生になってもやらされていた。一体なぜ？", "ans": "あまりにも美味しそうに食べるので店側が『プロモーションビデオ』を撮り続けている"},
@@ -58,36 +61,7 @@ if 'golden_examples' not in st.session_state:
         {"odai": "友達と2人で古畑任三郎を観ていて事件を解決した後、友達が必ずする行動とは？", "ans": "警察の鑑識並みの手際で部屋に残った私の指紋をすべて拭き取り始める"}
     ]
 
-# --- 3. サイドバー（追加学習フォーム：重複防止・入力クリア） ---
-with st.sidebar:
-    st.header("🧠 感性同期・追加学習")
-    st.write("面白いセットを追加してGeminiを教育せよ。")
-    
-    with st.form("learning_form", clear_on_submit=True):
-        new_odai = st.text_area("お題を追加", height=100)
-        new_ans = st.text_input("回答を追加")
-        submit_study = st.form_submit_button("感性を覚えさせる")
-        
-        if submit_study:
-            if new_odai and new_ans:
-                is_duplicate = any(ex["odai"] == new_odai and ex["ans"] == new_ans for ex in st.session_state.golden_examples)
-                if not is_duplicate:
-                    st.session_state.golden_examples.append({"odai": new_odai, "ans": new_ans})
-                    st.success("お題と回答を登録しました。")
-                else:
-                    st.warning("その内容は既に登録済みです。")
-            else:
-                st.error("お題と回答、両方入力してください。")
-    
-    st.write("---")
-    st.write(f"### 学習済みリスト ({len(st.session_state.golden_examples)}件)")
-    for i, ex in enumerate(reversed(st.session_state.golden_examples)):
-        idx = len(st.session_state.golden_examples) - i
-        with st.expander(f"傑作 {idx}"):
-            st.write(f"**お題**: {ex['odai']}")
-            st.write(f"**回答**: {ex['ans']}")
-
-# --- 4. 音声・動画ロジック（変更厳禁） ---
+# --- 3. 音声・動画ロジック（字幕用と音声用を分離） ---
 async def save_edge_voice(text, filename, voice_name, rate="+15%"):
     communicate = edge_tts.Communicate(text, voice_name, rate=rate)
     await communicate.save(filename)
@@ -96,6 +70,7 @@ def make_silence(duration):
     return AudioClip(lambda t: [0, 0], duration=duration, fps=44100)
 
 def build_controlled_audio(full_text, mode="gtts"):
+    # 読み間違いやすい基本ルールだけは残しつつ、ブラウザからの指定を優先
     parts = re.split(r'(_+)', full_text)
     clips = []
     for i, part in enumerate(parts):
@@ -117,10 +92,8 @@ def build_controlled_audio(full_text, mode="gtts"):
 def create_text_image(text, fontsize, color, pos=(960, 540)):
     img = Image.new("RGBA", (1920, 1080), (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
-    try:
-        font = ImageFont.truetype(FONT_PATH, fontsize)
-    except:
-        return None
+    try: font = ImageFont.truetype(FONT_PATH, fontsize)
+    except: return None
     clean_display = text.replace("_", "　")
     display_text = clean_display.replace("　", "\n").replace(" ", "\n")
     lines = display_text.split("\n")
@@ -135,113 +108,95 @@ def create_text_image(text, fontsize, color, pos=(960, 540)):
         current_y += line_heights[i] + line_spacing
     return img
 
-def create_geki_video(odai, answer):
+def create_geki_video(odai, answer_display, answer_audio):
     for f in [BASE_VIDEO, SOUND1, SOUND2]:
-        if not os.path.exists(f):
-            st.error(f"素材が見当たりません: {f}")
-            return None
+        if not os.path.exists(f): return None
     try:
         video = VideoFileClip(BASE_VIDEO).without_audio()
-        clean_ans = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer).strip()
+        clean_display = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer_display).strip()
+        clean_audio = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer_audio).strip()
+        
         i1 = create_text_image(odai, 100, "black", pos=(960, 530)) 
         i2 = create_text_image(odai, 55, "black", pos=(880, 300))
-        i3 = create_text_image(clean_ans, 120, "black", pos=(960, 500))
+        i3 = create_text_image(clean_display, 120, "black", pos=(960, 500))
         c1 = ImageClip(np.array(i1)).set_start(2.0).set_end(8.0).set_duration(6.0)
         c2 = ImageClip(np.array(i2)).set_start(8.0).set_end(10.0).set_duration(2.0)
         c3 = ImageClip(np.array(i3)).set_start(10.0).set_end(16.0).set_duration(6.0)
+        
         voice_odai_clip = build_controlled_audio(odai, mode="gtts")
-        voice_ans_clip = build_controlled_audio(clean_ans, mode="edge")
+        # ここで「ブラウザで修正した読み」を音声合成に渡す
+        voice_ans_clip = build_controlled_audio(clean_audio, mode="edge")
+        
         audio_list = []
         if voice_odai_clip: audio_list.append(voice_odai_clip.set_start(2.5))
         if voice_ans_clip: audio_list.append(voice_ans_clip.set_start(10.5))
         s1_audio = AudioFileClip(SOUND1).set_start(0.8).volumex(0.2)
         s2_audio = AudioFileClip(SOUND2).set_start(9.0).volumex(0.3)
         audio_list.extend([s1_audio, s2_audio])
-        combined_audio = CompositeAudioClip(audio_list)
-        video_composite = CompositeVideoClip([video, c1, c2, c3], size=(1920, 1080))
-        final = video_composite.set_audio(combined_audio)
+        final = video.set_audio(CompositeAudioClip(audio_list))
         out = "geki.mp4"
-        final.write_videofile(out, fps=24, codec="libx264", audio_codec="aac", temp_audiofile='temp-audio.m4a', remove_temp=True)
-        video.close(); final.close()
+        final.write_videofile(out, fps=24, codec="libx264", audio_codec="aac", remove_temp=True)
         return out
     except Exception as e:
         st.error(f"合成失敗: {e}"); return None
 
+# --- 4. サイドバー ---
+with st.sidebar:
+    st.header("🧠 感性同期・追加学習")
+    with st.form("learning_form", clear_on_submit=True):
+        new_odai = st.text_area("お題を追加", height=100)
+        new_ans = st.text_input("回答を追加")
+        if st.form_submit_button("感性を覚えさせる"):
+            if new_odai and new_ans:
+                st.session_state.golden_examples.append({"odai": new_odai, "ans": new_ans})
+                st.success("お題と回答を登録しました。")
+    st.write(f"### 学習済みリスト ({len(st.session_state.golden_examples)}件)")
+
 # --- 5. メインUI ---
 st.title("大喜利アンサー")
-
-st.subheader("キーワード")
-col1, col2, col3 = st.columns([5, 1.5, 1.5])
-with col1:
-    st.session_state.kw = st.text_input("KW", value=st.session_state.kw, label_visibility="collapsed")
-with col2:
-    if st.button("消去"):
-        st.session_state.kw = ""; st.rerun()
-with col3:
-    if st.button("ランダム"):
-        ws = ["AI", "孫", "無人島", "コンビニ", "サウナ", "SNS"]
-        st.session_state.kw = random.choice(ws); st.rerun()
+kw_col, clr_col, rnd_col = st.columns([5, 1, 1])
+st.session_state.kw = kw_col.text_input("キーワード", value=st.session_state.kw, label_visibility="collapsed")
+if clr_col.button("消去"): st.session_state.kw = ""; st.rerun()
+if rnd_col.button("ランダム"): st.session_state.kw = random.choice(["AI", "孫", "サウナ"]); st.rerun()
 
 if st.button("お題生成", use_container_width=True):
-    with st.spinner("閃き中..."):
-        m = genai.GenerativeModel(CHOSEN_MODEL)
-        prompt = f"「{st.session_state.kw}」をテーマに、思わず回答したくなる鋭い大喜利お題を3つ作成せよ。挨拶不要、お題のみを3行で。"
-        r = m.generate_content(prompt)
-        st.session_state.odais = [l.strip() for l in r.text.split('\n') if l.strip()][:3]
-        st.session_state.selected_odai = ""; st.session_state.ans_list = []; st.rerun()
+    m = genai.GenerativeModel(CHOSEN_MODEL)
+    r = m.generate_content(f"「{st.session_state.kw}」テーマの大喜利お題を3つ。回答のみ3行で。")
+    st.session_state.odais = [l.strip() for l in r.text.split('\n') if l.strip()][:3]
+    st.session_state.selected_odai = ""; st.rerun()
 
 if st.session_state.odais:
-    st.write("### お題を選択してください")
     for i, o in enumerate(st.session_state.odais):
-        if st.button(o, key=f"o_btn_{i}"):
-            st.session_state.selected_odai = o; st.session_state.ans_list = []; st.rerun()
+        if st.button(o, key=f"o_{i}"): st.session_state.selected_odai = o; st.rerun()
 
 if st.session_state.selected_odai:
     st.write("---")
-    st.session_state.selected_odai = st.text_input("お題確定（_で0.1秒のタメ）", value=st.session_state.selected_odai)
-    style_mode = st.selectbox("ユーモアの種類", ["通常", "知的", "シュール", "ブラック"])
-    
+    st.session_state.selected_odai = st.text_input("お題確定（_で0.1sタメ）", value=st.session_state.selected_odai)
+    style = st.selectbox("ユーモア", ["通常", "知的", "シュール", "ブラック"])
     if st.button("回答20案生成", type="primary"):
-        with st.spinner("魂の20案を捻り出し中..."):
-            m = genai.GenerativeModel(CHOSEN_MODEL)
-            examples_str = "\n".join([f"お題：{ex['odai']}\n回答：{ex['ans']}" for ex in st.session_state.golden_examples])
-            style_prompts = {
-                "通常": "爆笑を誘うボケを優先。",
-                "知的": "インテリなボケ。",
-                "シュール": "不条理なボケ。",
-                "ブラック": "鋭い毒舌ボケ。"
-            }
-            p = f"""
-            あなたは伝説的な大喜利回答者です。
-            【お題】: {st.session_state.selected_odai}
-            【スタイル】: {style_prompts[style_mode]}
-
-            【過去の最高傑作（これらを絶対的な手本にせよ）】
-            {examples_str}
-
-            【製作ルール】
-            1. お題に対する「ボケ（回答）」のみを出力せよ。
-            2. カッコ（）を使った補足や説明は一切不要。一言でオチをつけろ。
-            3. お題を復唱したり、新しい質問を作成することは厳禁。
-            4. 回答のみを20個、1. 2. 3. と番号を振り、1行1案で出力せよ。
-            """
-            r = m.generate_content(p)
-            ls = [l.strip() for l in r.text.split('\n') if l.strip()]
-            st.session_state.ans_list = [l for l in ls if not any(w in l for w in ["はい", "承知", "こちら", "紹介"])][:20]
-            st.rerun()
+        m = genai.GenerativeModel(CHOSEN_MODEL)
+        ex = "\n".join([f"お題：{e['odai']}\n回答：{e['ans']}" for e in st.session_state.golden_examples])
+        p = f"伝説の大喜利回答者として【お題】:{st.session_state.selected_odai}に答えよ。手本:{ex}\nルール:回答のみ20個、1. 2. 3. と番号を振り1行1案で。カッコ説明禁止。"
+        r = m.generate_content(p)
+        st.session_state.ans_list = [l.strip() for l in r.text.split('\n') if l.strip()][:20]
+        # 音声用の初期値としてそのままコピー
+        st.session_state.pronounce_list = st.session_state.ans_list[:]
+        st.rerun()
 
 if st.session_state.ans_list:
-    st.write("---")
-    st.write("### 回答一覧")
+    st.write("### 回答一覧（下の黄色い欄で読み方を修正できます）")
     for i in range(len(st.session_state.ans_list)):
         col_t, col_g = st.columns([9, 1])
-        st.session_state.ans_list[i] = col_t.text_input(f"A{i+1}", value=st.session_state.ans_list[i], label_visibility="collapsed", key=f"ed_ans_{i}")
-        if col_g.button("生成", key=f"b_gen_{i}"):
+        # 字幕用
+        st.session_state.ans_list[i] = col_t.text_input(f"字幕案 {i+1}", value=st.session_state.ans_list[i], key=f"disp_{i}")
+        # 音声用（読み修正用）
+        st.session_state.pronounce_list[i] = st.text_input(f"音声用読み（修正可）", value=st.session_state.pronounce_list[i], key=f"pron_{i}", label_visibility="collapsed")
+        st.markdown(f'<p class="pronounce-box">↑ 読みが変な場合はここを「なんていった」「いい」等に書き換えてください</p>', unsafe_allow_html=True)
+        
+        if col_g.button("生成", key=f"b_{i}"):
             with st.spinner("動画生成中..."):
-                path = create_geki_video(st.session_state.selected_odai, st.session_state.ans_list[i])
-                if path:
-                    st.video(path); 
-                    with open(path, "rb") as f: st.download_button("保存", f, file_name=f"geki_{i}.mp4", key=f"dl_{i}")
+                path = create_geki_video(st.session_state.selected_odai, st.session_state.ans_list[i], st.session_state.pronounce_list[i])
+                if path: st.video(path)
 
 st.write("---")
 st.caption("「私が100%制御しています」")
