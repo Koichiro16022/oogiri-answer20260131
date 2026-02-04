@@ -30,7 +30,6 @@ st.markdown("""
     .stButton>button { width: 100%; border-radius: 5px; font-weight: bold; }
     div.stButton > button:first-child { background: linear-gradient(135deg, #FFD700 0%, #E5E5E5 100%); color: #001220; }
     .stVideo { max-width: 100%; margin: auto; }
-    /* 発音入力欄を目立たせる */
     .pronounce-box { font-size: 0.8rem; color: #FFD700; margin-top: -10px; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
@@ -40,9 +39,9 @@ if 'kw' not in st.session_state: st.session_state.kw = "SNS"
 if 'odais' not in st.session_state: st.session_state.odais = []
 if 'selected_odai' not in st.session_state: st.session_state.selected_odai = ""
 if 'ans_list' not in st.session_state: st.session_state.ans_list = []
-# 発音（読み）を保持するリスト
 if 'pronounce_list' not in st.session_state: st.session_state.pronounce_list = []
 
+# 初期学習データ
 if 'golden_examples' not in st.session_state:
     st.session_state.golden_examples = [
         {"odai": "目に入れても痛くない孫におじいちゃんがブチギレ。いったい何があった？", "ans": "おじいちゃんの入れ歯をメルカリで『ビンテージ雑貨』として出品していた"},
@@ -61,7 +60,7 @@ if 'golden_examples' not in st.session_state:
         {"odai": "友達と2人で古畑任三郎を観ていて事件を解決した後、友達が必ずする行動とは？", "ans": "警察の鑑識並みの手際で部屋に残った私の指紋をすべて拭き取り始める"}
     ]
 
-# --- 3. 音声・動画ロジック（字幕用と音声用を分離） ---
+# --- 3. 音声・動画ロジック ---
 async def save_edge_voice(text, filename, voice_name, rate="+15%"):
     communicate = edge_tts.Communicate(text, voice_name, rate=rate)
     await communicate.save(filename)
@@ -70,7 +69,6 @@ def make_silence(duration):
     return AudioClip(lambda t: [0, 0], duration=duration, fps=44100)
 
 def build_controlled_audio(full_text, mode="gtts"):
-    # 読み間違いやすい基本ルールだけは残しつつ、ブラウザからの指定を優先
     parts = re.split(r'(_+)', full_text)
     clips = []
     for i, part in enumerate(parts):
@@ -124,7 +122,6 @@ def create_geki_video(odai, answer_display, answer_audio):
         c3 = ImageClip(np.array(i3)).set_start(10.0).set_end(16.0).set_duration(6.0)
         
         voice_odai_clip = build_controlled_audio(odai, mode="gtts")
-        # ここで「ブラウザで修正した読み」を音声合成に渡す
         voice_ans_clip = build_controlled_audio(clean_audio, mode="edge")
         
         audio_list = []
@@ -171,27 +168,29 @@ if st.session_state.odais:
 
 if st.session_state.selected_odai:
     st.write("---")
-    st.session_state.selected_odai = st.text_input("お題確定（_で0.1sタメ）", value=st.session_state.selected_odai)
+    st.session_state.selected_odai = st.text_input("お題確定", value=st.session_state.selected_odai)
     style = st.selectbox("ユーモア", ["通常", "知的", "シュール", "ブラック"])
     if st.button("回答20案生成", type="primary"):
-        m = genai.GenerativeModel(CHOSEN_MODEL)
-        ex = "\n".join([f"お題：{e['odai']}\n回答：{e['ans']}" for e in st.session_state.golden_examples])
-        p = f"伝説の大喜利回答者として【お題】:{st.session_state.selected_odai}に答えよ。手本:{ex}\nルール:回答のみ20個、1. 2. 3. と番号を振り1行1案で。カッコ説明禁止。"
-        r = m.generate_content(p)
-        st.session_state.ans_list = [l.strip() for l in r.text.split('\n') if l.strip()][:20]
-        # 音声用の初期値としてそのままコピー
-        st.session_state.pronounce_list = st.session_state.ans_list[:]
-        st.rerun()
+        with st.spinner("思考中..."):
+            m = genai.GenerativeModel(CHOSEN_MODEL)
+            ex = "\n".join([f"お題：{e['odai']}\n回答：{e['ans']}" for e in st.session_state.golden_examples])
+            p = f"伝説の大喜利回答者として【お題】:{st.session_state.selected_odai}に答えよ。手本:{ex}\nルール:回答のみ20個、番号を振り1行1案で。カッコ説明禁止。"
+            r = m.generate_content(p)
+            ans_raw = [l.strip() for l in r.text.split('\n') if l.strip()][:20]
+            # ここで2つのリストを同時に確実に初期化する（IndexError防止）
+            st.session_state.ans_list = ans_raw
+            st.session_state.pronounce_list = ans_raw[:]
+            st.rerun()
 
 if st.session_state.ans_list:
+    # リストの長さが一致していることを保証する安全策
+    list_len = min(len(st.session_state.ans_list), len(st.session_state.pronounce_list))
     st.write("### 回答一覧（下の黄色い欄で読み方を修正できます）")
-    for i in range(len(st.session_state.ans_list)):
+    for i in range(list_len):
         col_t, col_g = st.columns([9, 1])
-        # 字幕用
         st.session_state.ans_list[i] = col_t.text_input(f"字幕案 {i+1}", value=st.session_state.ans_list[i], key=f"disp_{i}")
-        # 音声用（読み修正用）
-        st.session_state.pronounce_list[i] = st.text_input(f"音声用読み（修正可）", value=st.session_state.pronounce_list[i], key=f"pron_{i}", label_visibility="collapsed")
-        st.markdown(f'<p class="pronounce-box">↑ 読みが変な場合はここを「なんていった」「いい」等に書き換えてください</p>', unsafe_allow_html=True)
+        st.session_state.pronounce_list[i] = st.text_input(f"音声読み修正 {i+1}", value=st.session_state.pronounce_list[i], key=f"pron_{i}", label_visibility="collapsed")
+        st.markdown(f'<p class="pronounce-box">↑ 読み修正（例：なんていった、いい、よい 等）</p>', unsafe_allow_html=True)
         
         if col_g.button("生成", key=f"b_{i}"):
             with st.spinner("動画生成中..."):
