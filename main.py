@@ -1,12 +1,13 @@
 import re
 import os
 import random
+import asyncio
 import numpy as np
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, AudioFileClip, CompositeAudioClip
-from gtts import gTTS
+import edge_tts
 
 # --- 1. 基本設定 ---
 if "GEMINI_API_KEY" in st.secrets:
@@ -40,7 +41,12 @@ if 'odais' not in st.session_state: st.session_state.odais = []
 if 'selected_odai' not in st.session_state: st.session_state.selected_odai = ""
 if 'ans_list' not in st.session_state: st.session_state.ans_list = []
 
-# --- 3. 動画合成ロジック ---
+# --- 3. 音声生成用ヘルパー (edge-tts 非同期処理) ---
+async def save_voice(text, filename, voice_name):
+    communicate = edge_tts.Communicate(text, voice_name)
+    await communicate.save(filename)
+
+# --- 4. 動画合成ロジック ---
 def create_text_image(text, fontsize, color, pos=(960, 540)):
     """横長キャンバス(1920x1080)・中央揃え描画"""
     img = Image.new("RGBA", (1920, 1080), (255, 255, 255, 0))
@@ -81,21 +87,18 @@ def create_geki_video(odai, answer):
         i2 = create_text_image(odai, 55, "black", pos=(880, 300))
         i3 = create_text_image(clean_text, 120, "black", pos=(960, 500))
         
-        # 3. 映像タイムライン設定（最新タイミング）
+        # 3. 映像タイムライン設定
         c1 = ImageClip(np.array(i1)).set_start(2.0).set_end(8.0).set_duration(6.0)
         c2 = ImageClip(np.array(i2)).set_start(8.0).set_end(10.0).set_duration(2.0)
         c3 = ImageClip(np.array(i3)).set_start(10.0).set_end(16.0).set_duration(6.0)
 
-        # 4. 音声の多重合成
-        # A: お題のナレーション（2.5s開始）
-        tts_odai = gTTS(odai, lang='ja')
-        tts_odai.save("tmp_odai.mp3")
+        # 4. 音声の多重合成 (edge-tts を使用)
+        # A: お題のナレーション（Nanami: 女性）
+        asyncio.run(save_voice(odai, "tmp_odai.mp3", "ja-JP-NanamiNeural"))
         voice_odai = AudioFileClip("tmp_odai.mp3").set_start(2.5)
         
-        # B: 回答のナレーション（10.5s開始：文字が出て少ししたタイミング）
-        # ※gTTS単体では男性指定ができないため、分離して個別に制御
-        tts_ans = gTTS(clean_text, lang='ja')
-        tts_ans.save("tmp_ans.mp3")
+        # B: 回答のナレーション（Keita: 男性）
+        asyncio.run(save_voice(clean_text, "tmp_ans.mp3", "ja-JP-KeitaNeural"))
         voice_ans = AudioFileClip("tmp_ans.mp3").set_start(10.5)
         
         # C: 効果音1（0.8s：お題直前）
@@ -135,7 +138,7 @@ def create_geki_video(odai, answer):
         st.error(f"合成失敗: {e}")
         return None
 
-# --- 4. UI ---
+# --- 5. UI ---
 st.subheader("キーワード")
 col1, col2, col3 = st.columns([5, 1.5, 1.5])
 with col1:
