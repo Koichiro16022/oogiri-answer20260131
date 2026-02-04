@@ -94,7 +94,7 @@ def create_geki_video(odai, answer):
 
         # C: 効果音1（0.8s：お題直前）
         # .volumex(0.5) を追加することで音量を50%に下げます
-        s1_audio = AudioFileClip(SOUND1).set_start(0.8).volumex(0.5)
+        s1_audio = AudioFileClip(SOUND1).set_start(0.8).volumex(0.3)
         s2_audio = AudioFileClip(SOUND2).set_start(9.0)
         
         combined_audio = CompositeAudioClip([voice_odai, voice_ans, s1_audio, s2_audio])
