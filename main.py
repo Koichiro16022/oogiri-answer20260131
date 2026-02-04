@@ -6,9 +6,10 @@ import numpy as np
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image, ImageDraw, ImageFont
-from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, AudioFileClip, CompositeAudioClip
+from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, AudioFileClip, CompositeAudioClip, concatenate_audioclips
 from gtts import gTTS
 import edge_tts
+from pydub import AudioSegment
 
 # --- 1. 基本設定 ---
 if "GEMINI_API_KEY" in st.secrets:
@@ -41,10 +42,36 @@ if 'odais' not in st.session_state: st.session_state.odais = []
 if 'selected_odai' not in st.session_state: st.session_state.selected_odai = ""
 if 'ans_list' not in st.session_state: st.session_state.ans_list = []
 
-# --- 3. 音声生成用ヘルパー (edge-tts 非同期) ---
+# --- 3. 音声生成用ヘルパー (edge-tts 非同期 & 物理沈黙制御) ---
 async def save_edge_voice(text, filename, voice_name, rate="+15%"):
     communicate = edge_tts.Communicate(text, voice_name, rate=rate)
     await communicate.save(filename)
+
+def build_controlled_audio(full_text, mode="gtts"):
+    """アンダースコアを解析して無音を挟んだ音声を構築"""
+    parts = re.split(r'(_+)', full_text)
+    clips = []
+    
+    for i, part in enumerate(parts):
+        if not part: continue
+        
+        tmp_filename = f"part_{mode}_{i}.mp3"
+        if '_' in part:
+            # アンダースコア1つにつき0.5秒の無音
+            duration_ms = len(part) * 500
+            silence = AudioSegment.silent(duration=duration_ms)
+            silence.export(tmp_filename, format="mp3")
+            clips.append(AudioFileClip(tmp_filename))
+        else:
+            if mode == "gtts":
+                tts = gTTS(part, lang='ja')
+                tts.save(tmp_filename)
+            else:
+                asyncio.run(save_edge_voice(part, tmp_filename, "ja-JP-KeitaNeural", rate="+15%"))
+            clips.append(AudioFileClip(tmp_filename))
+            
+    if not clips: return None
+    return concatenate_audioclips(clips)
 
 # --- 4. 動画合成ロジック ---
 def create_text_image(text, fontsize, color, pos=(960, 540)):
@@ -54,7 +81,11 @@ def create_text_image(text, fontsize, color, pos=(960, 540)):
         font = ImageFont.truetype(FONT_PATH, fontsize)
     except:
         return None
-    display_text = text.replace("　", "\n").replace(" ", "\n")
+    
+    # 映像表示用：アンダースコアを全角スペースにして改行へ変換
+    clean_display = text.replace("_", "　")
+    display_text = clean_display.replace("　", "\n").replace(" ", "\n")
+    
     lines = display_text.split("\n")
     line_spacing = 15
     line_heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
@@ -75,41 +106,38 @@ def create_geki_video(odai, answer):
     try:
         video = VideoFileClip(BASE_VIDEO).without_audio()
         clean_text = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer).strip()
+        
+        # テロップ画像生成
         i1 = create_text_image(odai, 100, "black", pos=(960, 530)) 
         i2 = create_text_image(odai, 55, "black", pos=(880, 300))
         i3 = create_text_image(clean_text, 120, "black", pos=(960, 500))
+        
         c1 = ImageClip(np.array(i1)).set_start(2.0).set_end(8.0).set_duration(6.0)
         c2 = ImageClip(np.array(i2)).set_start(8.0).set_end(10.0).set_duration(2.0)
         c3 = ImageClip(np.array(i3)).set_start(10.0).set_end(16.0).set_duration(6.0)
 
-        # 音声生成
-        # お題: gTTS (自然な女性)
-        tts_odai = gTTS(odai, lang='ja')
-        tts_odai.save("tmp_odai.mp3")
-        voice_odai = AudioFileClip("tmp_odai.mp3").set_start(2.5)
+        # 音声生成（アンダースコア制御による物理連結）
+        voice_odai_clip = build_controlled_audio(odai, mode="gtts")
+        voice_ans_clip = build_controlled_audio(clean_text, mode="edge")
 
-        # 回答: edge-tts (男性・圭太) 速度+15%
-        asyncio.run(save_edge_voice(clean_text, "tmp_ans.mp3", "ja-JP-KeitaNeural", rate="+15%"))
-        voice_ans = AudioFileClip("tmp_ans.mp3").set_start(10.5)
-
-        # C: 効果音1（0.8s：お題直前）
-        # .volumex(0.5) を追加することで音量を50%に下げます
+        audio_list = []
+        if voice_odai_clip:
+            audio_list.append(voice_odai_clip.set_start(2.5))
+        if voice_ans_clip:
+            audio_list.append(voice_ans_clip.set_start(10.5))
+            
         s1_audio = AudioFileClip(SOUND1).set_start(0.8).volumex(0.2)
-        # D: 効果音2（9.0s：回答誘導）
-        # .volumex(0.3) を追加（数値はお好みで調整してください）
         s2_audio = AudioFileClip(SOUND2).set_start(9.0).volumex(0.3)
+        audio_list.extend([s1_audio, s2_audio])
         
-        combined_audio = CompositeAudioClip([voice_odai, voice_ans, s1_audio, s2_audio])
+        combined_audio = CompositeAudioClip(audio_list)
         video_composite = CompositeVideoClip([video, c1, c2, c3], size=(1920, 1080))
         final = video_composite.set_audio(combined_audio)
         
         out = "geki.mp4"
         final.write_videofile(out, fps=24, codec="libx264", audio_codec="aac", temp_audiofile='temp-audio.m4a', remove_temp=True)
+        
         video.close()
-        voice_odai.close()
-        voice_ans.close()
-        s1_audio.close()
-        s2_audio.close()
         final.close()
         return out
     except Exception as e:
@@ -151,7 +179,7 @@ if st.session_state.odais:
 
 if st.session_state.selected_odai:
     st.write("---")
-    st.session_state.selected_odai = st.text_input("お題確定", value=st.session_state.selected_odai)
+    st.session_state.selected_odai = st.text_input("お題確定（_で0.5秒のタメ）", value=st.session_state.selected_odai)
     tone = st.selectbox("ユーモアの種類", ["通常", "知的", "シュール", "ブラック"])
     if st.button("回答20案生成", type="primary"):
         with st.spinner("生成中..."):
