@@ -57,6 +57,7 @@ def build_controlled_audio(full_text, mode="gtts"):
     for i, part in enumerate(parts):
         if not part: continue
         if '_' in part:
+            # アンダースコア1つにつき0.1秒の無音を生成
             duration = len(part) * 0.1
             clips.append(make_silence(duration))
         else:
@@ -155,24 +156,23 @@ if st.session_state.odais:
 if st.session_state.selected_odai:
     st.write("---")
     st.session_state.selected_odai = st.text_input("お題確定（_で0.1秒のタメ）", value=st.session_state.selected_odai)
-    style_mode = st.selectbox("回答スタイル", ["通常（バラエティ）", "一言（特化）", "普通（特化）", "知的", "シュール", "ブラック"])
+    # 選択肢を初期の4種類に集約
+    style_mode = st.selectbox("ユーモアの種類", ["通常", "知的", "シュール", "ブラック"])
     
     if st.button("回答20案生成", type="primary"):
         with st.spinner("生成中..."):
             m = genai.GenerativeModel(CHOSEN_MODEL)
-            # プロンプトの強度を最大化（AIへの絶対命令）
+            # 製作初期の「キレ」を重視したプロンプトへ回帰
             style_prompts = {
-                "通常（バラエティ）": "知的・シュール・ブラック全ての要素をランダムに混ぜ、長さも一言から長文までバラバラに出してください。",
-                "一言（特化）": "【絶対命令】全ての回答を「12文字以内」の極めて短い一言に限定してください。質は知的・ブラック・シュール混合で構いません。",
-                "普通（特化）": "【絶対命令】一言回答を禁止します。20文字から40文字程度の「しっかりとした文章」の回答のみを出してください。質は混合です。",
-                "知的": "【絶対命令】教養、専門用語、文学的表現、あるいは論理的な飛躍を用いた、知的で感心させる回答のみを出してください。",
-                "シュール": "【絶対命令】脈絡がない、意味不明、不条理など、独特の空気感を持つシュールな回答のみを出してください。",
-                "ブラック": "【絶対命令】毒舌、皮肉、不謹慎、人間の闇を突くようなブラックユーモア全開の回答のみを出してください。"
+                "通常": "自由な発想で。最も面白い回答を優先してください。",
+                "知的": "教養、専門用語、文学的表現などを用いた、ひねりのあるインテリな回答。",
+                "シュール": "独特な角度から攻める、中毒性のある不条理な回答。",
+                "ブラック": "毒気や皮肉の効いた、ギリギリを攻めるブラックユーモアのある回答。"
             }
-            p = f"大喜利のお題：{st.session_state.selected_odai}\nスタイルの制約：{style_prompts[style_mode]}\n【出力形式】挨拶や解説は一切禁止。回答20案を、1. 2. 3. と番号を振って1行1案で出力せよ。"
+            p = f"お題：{st.session_state.selected_odai}\n雰囲気：{style_prompts[style_mode]}\n回答20案。番号を振り1行1案。余計な挨拶や解説は一切不要。面白さのみを追求せよ。"
             r = m.generate_content(p)
             ls = [l.strip() for l in r.text.split('\n') if l.strip()]
-            st.session_state.ans_list = [l for l in ls if not any(w in l for w in ["はい", "承知", "こちら"])][:20]
+            st.session_state.ans_list = [l for l in ls if not any(w in l for w in ["はい", "承知", "紹介", "こちら"])][:20]
             st.rerun()
 
 if st.session_state.ans_list:
