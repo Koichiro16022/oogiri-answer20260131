@@ -38,7 +38,7 @@ st.markdown("""
     
     /* 入力欄のラベル（説明文）を白く太くして見やすくする */
     .stTextInput label, .stTextArea label {
-        color: #FFFFFF !important;
+        color: #01579B !important;
         font-size: 1rem !important;
         font-weight: 800 !important;
         text-shadow: 1px 1px 2px #000000;
