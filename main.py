@@ -33,13 +33,13 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. 状態管理（学習データ含む） ---
-if 'kw' not in st.session_state: st.session_state.kw = "孫"
+# --- 2. 状態管理 ---
+if 'kw' not in st.session_state: st.session_state.kw = "SNS"
 if 'odais' not in st.session_state: st.session_state.odais = []
 if 'selected_odai' not in st.session_state: st.session_state.selected_odai = ""
 if 'ans_list' not in st.session_state: st.session_state.ans_list = []
 
-# 初期学習データ（1/31当時の傑作選）
+# 初期学習データ
 if 'golden_examples' not in st.session_state:
     st.session_state.golden_examples = [
         {"odai": "目に入れても痛くない孫におじいちゃんがブチギレ。いったい何があった？", "ans": "おじいちゃんの入れ歯をメルカリで『ビンテージ雑貨』として出品していた"},
@@ -58,7 +58,7 @@ if 'golden_examples' not in st.session_state:
         {"odai": "友達と2人で古畑任三郎を観ていて事件を解決した後、友達が必ずする行動とは？", "ans": "警察の鑑識並みの手際で部屋に残った私の指紋をすべて拭き取り始める"}
     ]
 
-# --- 3. サイドバー（追加学習フォーム） ---
+# --- 3. サイドバー ---
 with st.sidebar:
     st.header("🧠 感性同期・追加学習")
     new_odai = st.text_area("お題を追加", height=100)
@@ -194,12 +194,12 @@ if st.session_state.selected_odai:
             m = genai.GenerativeModel(CHOSEN_MODEL)
             examples_str = "\n".join([f"お題：{ex['odai']}\n回答：{ex['ans']}" for ex in st.session_state.golden_examples])
             style_prompts = {
-                "通常": "自由な発想で、最も爆笑を誘うボケを優先せよ。",
-                "知的": "教養、専門用語、文学的表現などを用いたインテリなボケ。",
-                "シュール": "不条理で独特な空気感を持つ、中毒性のあるボケ。",
-                "ブラック": "人間の闇や社会の皮肉を突く、鋭い毒舌ボケ。"
+                "通常": "爆笑を誘うボケを優先。",
+                "知的": "インテリなボケ。",
+                "シュール": "不条理なボケ。",
+                "ブラック": "鋭い毒舌ボケ。"
             }
-            # 出力形式の指示を強化（お題を絶対に復唱させない）
+            # ルールを強化：お題復唱禁止、カッコ補足禁止
             p = f"""
             あなたは伝説的な大喜利回答者です。
             【お題】: {st.session_state.selected_odai}
@@ -210,8 +210,8 @@ if st.session_state.selected_odai:
 
             【製作ルール】
             1. お題に対する「ボケ（回答）」のみを出力せよ。
-            2. お題を復唱したり、新しい質問を作成することは厳禁。
-            3. 具体的な固有名詞や生々しい行動描写を多用せよ。
+            2. カッコ（）を使った補足や説明、言い訳は一切不要。一言でオチをつけろ。
+            3. お題を復唱したり、新しい質問を作成することは厳禁。
             4. 回答のみを20個、1. 2. 3. と番号を振り、1行1案で出力せよ。
             """
             r = m.generate_content(p)
