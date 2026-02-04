@@ -7,6 +7,7 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, AudioFileClip, CompositeAudioClip
+from gtts import gTTS
 import edge_tts
 
 # --- 1. 基本設定 ---
@@ -42,7 +43,7 @@ if 'selected_odai' not in st.session_state: st.session_state.selected_odai = ""
 if 'ans_list' not in st.session_state: st.session_state.ans_list = []
 
 # --- 3. 音声生成用ヘルパー (edge-tts 非同期処理) ---
-async def save_voice(text, filename, voice_name):
+async def save_edge_voice(text, filename, voice_name):
     communicate = edge_tts.Communicate(text, voice_name)
     await communicate.save(filename)
 
@@ -92,13 +93,14 @@ def create_geki_video(odai, answer):
         c2 = ImageClip(np.array(i2)).set_start(8.0).set_end(10.0).set_duration(2.0)
         c3 = ImageClip(np.array(i3)).set_start(10.0).set_end(16.0).set_duration(6.0)
 
-        # 4. 音声の多重合成 (edge-tts を使用)
-        # A: お題のナレーション（Nanami: 女性）
-        asyncio.run(save_voice(odai, "tmp_odai.mp3", "ja-JP-NanamiNeural"))
+        # 4. 音声のハイブリッド合成
+        # A: お題のナレーション（gTTS: 自然な女性）
+        tts_odai = gTTS(odai, lang='ja')
+        tts_odai.save("tmp_odai.mp3")
         voice_odai = AudioFileClip("tmp_odai.mp3").set_start(2.5)
         
-        # B: 回答のナレーション（Keita: 男性）
-        asyncio.run(save_voice(clean_text, "tmp_ans.mp3", "ja-JP-KeitaNeural"))
+        # B: 回答のナレーション（edge-tts: 男性・Keita）
+        asyncio.run(save_edge_voice(clean_text, "tmp_ans.mp3", "ja-JP-KeitaNeural"))
         voice_ans = AudioFileClip("tmp_ans.mp3").set_start(10.5)
         
         # C: 効果音1（0.8s：お題直前）
@@ -107,7 +109,7 @@ def create_geki_video(odai, answer):
         # D: 効果音2（9.0s：回答誘導）
         s2_audio = AudioFileClip(SOUND2).set_start(9.0)
         
-        # すべてミックス
+        # ミックス
         combined_audio = CompositeAudioClip([voice_odai, voice_ans, s1_audio, s2_audio])
         
         # 5. 最終合成
@@ -118,93 +120,4 @@ def create_geki_video(odai, answer):
         out = "geki.mp4"
         final.write_videofile(
             out, 
-            fps=24, 
-            codec="libx264", 
-            audio_codec="aac",
-            temp_audiofile='temp-audio.m4a',
-            remove_temp=True
-        )
-        
-        # 7. リソース解放
-        video.close()
-        voice_odai.close()
-        voice_ans.close()
-        s1_audio.close()
-        s2_audio.close()
-        final.close()
-        
-        return out
-    except Exception as e:
-        st.error(f"合成失敗: {e}")
-        return None
-
-# --- 5. UI ---
-st.subheader("キーワード")
-col1, col2, col3 = st.columns([5, 1.5, 1.5])
-with col1:
-    st.session_state.kw = st.text_input("KW", value=st.session_state.kw, label_visibility="collapsed")
-with col2:
-    if st.button("消去"):
-        st.session_state.kw = ""; st.rerun()
-with col3:
-    if st.button("ランダム"):
-        ws = ["AI", "孫", "無人島", "コンビニ", "サウナ", "SNS"]
-        st.session_state.kw = random.choice(ws); st.rerun()
-
-if st.button("お題生成", use_container_width=True):
-    with st.spinner("閃き中..."):
-        m = genai.GenerativeModel(CHOSEN_MODEL)
-        prompt = f"「{st.session_state.kw}」テーマの大喜利お題（IPPON風）を3つ、改行のみ。挨拶不要。"
-        r = m.generate_content(prompt)
-        st.session_state.odais = [l.strip() for l in r.text.split('\n') if l.strip()][:3]
-        st.session_state.selected_odai = ""
-        st.session_state.ans_list = []
-        st.rerun()
-
-if st.session_state.odais:
-    st.write("### お題を選択してください")
-    for i, o in enumerate(st.session_state.odais):
-        if st.button(o, key=f"o_btn_{i}"):
-            st.session_state.selected_odai = o
-            st.session_state.ans_list = []
-            st.rerun()
-
-if st.session_state.selected_odai:
-    st.write("---")
-    st.session_state.selected_odai = st.text_input(
-        "お題確定（改行箇所にスペースを入れてください）", 
-        value=st.session_state.selected_odai
-    )
-    
-    tone = st.selectbox("ユーモアの種類", ["通常", "知的", "シュール", "ブラック"])
-    
-    if st.button("回答20案生成", type="primary"):
-        with st.spinner("生成中..."):
-            m = genai.GenerativeModel(CHOSEN_MODEL)
-            p = f"お題：{st.session_state.selected_odai}\n雰囲気：{tone}\n回答20案。1.2.3.と番号を振り1行1案。挨拶不要。"
-            r = m.generate_content(p)
-            ls = [l.strip() for l in r.text.split('\n') if l.strip()]
-            st.session_state.ans_list = [l for l in ls if not any(w in l for w in ["はい", "承知", "紹介"])][:20]
-            st.rerun()
-
-if st.session_state.ans_list:
-    st.write("---")
-    st.write("### 回答一覧")
-    for i in range(len(st.session_state.ans_list)):
-        col_t, col_g = st.columns([9, 1])
-        st.session_state.ans_list[i] = col_t.text_input(
-            f"A{i+1}", 
-            value=st.session_state.ans_list[i], 
-            label_visibility="collapsed", 
-            key=f"ed_ans_{i}"
-        )
-        if col_g.button("生成", key=f"b_gen_{i}"):
-            with st.spinner("動画生成中..."):
-                path = create_geki_video(st.session_state.selected_odai, st.session_state.ans_list[i])
-                if path:
-                    st.video(path)
-                    with open(path, "rb") as f:
-                        st.download_button("保存", f, file_name=f"geki_{i}.mp4")
-    
-    st.write("---")
-    st.caption("「私が100%制御しています」")
+            fps=24,
