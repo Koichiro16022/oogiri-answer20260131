@@ -57,7 +57,6 @@ def build_controlled_audio(full_text, mode="gtts"):
     for i, part in enumerate(parts):
         if not part: continue
         if '_' in part:
-            # アンダースコア1つにつき0.1秒の無音を生成
             duration = len(part) * 0.1
             clips.append(make_silence(duration))
         else:
@@ -80,11 +79,8 @@ def create_text_image(text, fontsize, color, pos=(960, 540)):
         font = ImageFont.truetype(FONT_PATH, fontsize)
     except:
         return None
-    
-    # 映像表示用：アンダースコアを全角スペースにして改行へ変換
     clean_display = text.replace("_", "　")
     display_text = clean_display.replace("　", "\n").replace(" ", "\n")
-    
     lines = display_text.split("\n")
     line_spacing = 15
     line_heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
@@ -105,43 +101,29 @@ def create_geki_video(odai, answer):
     try:
         video = VideoFileClip(BASE_VIDEO).without_audio()
         clean_ans = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer).strip()
-        
-        # テロップ画像生成
         i1 = create_text_image(odai, 100, "black", pos=(960, 530)) 
         i2 = create_text_image(odai, 55, "black", pos=(880, 300))
         i3 = create_text_image(clean_ans, 120, "black", pos=(960, 500))
-        
         c1 = ImageClip(np.array(i1)).set_start(2.0).set_end(8.0).set_duration(6.0)
         c2 = ImageClip(np.array(i2)).set_start(8.0).set_end(10.0).set_duration(2.0)
         c3 = ImageClip(np.array(i3)).set_start(10.0).set_end(16.0).set_duration(6.0)
-
-        # 音声の物理連結構築
         voice_odai_clip = build_controlled_audio(odai, mode="gtts")
         voice_ans_clip = build_controlled_audio(clean_ans, mode="edge")
-
         audio_list = []
-        if voice_odai_clip:
-            audio_list.append(voice_odai_clip.set_start(2.5))
-        if voice_ans_clip:
-            audio_list.append(voice_ans_clip.set_start(10.5))
-            
+        if voice_odai_clip: audio_list.append(voice_odai_clip.set_start(2.5))
+        if voice_ans_clip: audio_list.append(voice_ans_clip.set_start(10.5))
         s1_audio = AudioFileClip(SOUND1).set_start(0.8).volumex(0.2)
         s2_audio = AudioFileClip(SOUND2).set_start(9.0).volumex(0.3)
         audio_list.extend([s1_audio, s2_audio])
-        
         combined_audio = CompositeAudioClip(audio_list)
         video_composite = CompositeVideoClip([video, c1, c2, c3], size=(1920, 1080))
         final = video_composite.set_audio(combined_audio)
-        
         out = "geki.mp4"
         final.write_videofile(out, fps=24, codec="libx264", audio_codec="aac", temp_audiofile='temp-audio.m4a', remove_temp=True)
-        
-        video.close()
-        final.close()
+        video.close(); final.close()
         return out
     except Exception as e:
-        st.error(f"合成失敗: {e}")
-        return None
+        st.error(f"合成失敗: {e}"); return None
 
 # --- 5. UI ---
 st.subheader("キーワード")
@@ -150,13 +132,11 @@ with col1:
     st.session_state.kw = st.text_input("KW", value=st.session_state.kw, label_visibility="collapsed")
 with col2:
     if st.button("消去"):
-        st.session_state.kw = ""
-        st.rerun()
+        st.session_state.kw = ""; st.rerun()
 with col3:
     if st.button("ランダム"):
         ws = ["AI", "孫", "無人島", "コンビニ", "サウナ", "SNS"]
-        st.session_state.kw = random.choice(ws)
-        st.rerun()
+        st.session_state.kw = random.choice(ws); st.rerun()
 
 if st.button("お題生成", use_container_width=True):
     with st.spinner("閃き中..."):
@@ -164,17 +144,13 @@ if st.button("お題生成", use_container_width=True):
         prompt = f"「{st.session_state.kw}」テーマの大喜利お題（IPPON風）を3つ、改行のみ。挨拶不要。"
         r = m.generate_content(prompt)
         st.session_state.odais = [l.strip() for l in r.text.split('\n') if l.strip()][:3]
-        st.session_state.selected_odai = ""
-        st.session_state.ans_list = []
-        st.rerun()
+        st.session_state.selected_odai = ""; st.session_state.ans_list = []; st.rerun()
 
 if st.session_state.odais:
     st.write("### お題を選択してください")
     for i, o in enumerate(st.session_state.odais):
         if st.button(o, key=f"o_btn_{i}"):
-            st.session_state.selected_odai = o
-            st.session_state.ans_list = []
-            st.rerun()
+            st.session_state.selected_odai = o; st.session_state.ans_list = []; st.rerun()
 
 if st.session_state.selected_odai:
     st.write("---")
@@ -184,18 +160,19 @@ if st.session_state.selected_odai:
     if st.button("回答20案生成", type="primary"):
         with st.spinner("生成中..."):
             m = genai.GenerativeModel(CHOSEN_MODEL)
+            # プロンプトの強度を最大化（AIへの絶対命令）
             style_prompts = {
-                "通常（バラエティ）": "知的・シュール・ブラックを混ぜ、一言から通常の長さまでバラエティ豊かな回答。ジャンル不問。",
-                "一言（特化）": "知的・シュール・ブラックを含むあらゆるジャンルで、とにかく「15文字以内の短い一言」のみ。",
-                "普通（特化）": "知的・シュール・ブラックを含むあらゆるジャンルで、一言ではない「普通の長さ（20〜40文字程度）」の回答のみ。",
-                "知的": "知的な言い回しや知識を活かした回答。",
-                "シュール": "意味不明で独特な世界観の回答。",
-                "ブラック": "毒気や皮肉の効いたブラックユーモアのある回答。"
+                "通常（バラエティ）": "知的・シュール・ブラック全ての要素をランダムに混ぜ、長さも一言から長文までバラバラに出してください。",
+                "一言（特化）": "【絶対命令】全ての回答を「12文字以内」の極めて短い一言に限定してください。質は知的・ブラック・シュール混合で構いません。",
+                "普通（特化）": "【絶対命令】一言回答を禁止します。20文字から40文字程度の「しっかりとした文章」の回答のみを出してください。質は混合です。",
+                "知的": "【絶対命令】教養、専門用語、文学的表現、あるいは論理的な飛躍を用いた、知的で感心させる回答のみを出してください。",
+                "シュール": "【絶対命令】脈絡がない、意味不明、不条理など、独特の空気感を持つシュールな回答のみを出してください。",
+                "ブラック": "【絶対命令】毒舌、皮肉、不謹慎、人間の闇を突くようなブラックユーモア全開の回答のみを出してください。"
             }
-            p = f"お題：{st.session_state.selected_odai}\n指示：{style_prompts[style_mode]}\n回答20案。番号を振り1行1案。挨拶不要。"
+            p = f"大喜利のお題：{st.session_state.selected_odai}\nスタイルの制約：{style_prompts[style_mode]}\n【出力形式】挨拶や解説は一切禁止。回答20案を、1. 2. 3. と番号を振って1行1案で出力せよ。"
             r = m.generate_content(p)
             ls = [l.strip() for l in r.text.split('\n') if l.strip()]
-            st.session_state.ans_list = [l for l in ls if not any(w in l for w in ["はい", "承知"])][:20]
+            st.session_state.ans_list = [l for l in ls if not any(w in l for w in ["はい", "承知", "こちら"])][:20]
             st.rerun()
 
 if st.session_state.ans_list:
@@ -208,9 +185,8 @@ if st.session_state.ans_list:
             with st.spinner("動画生成中..."):
                 path = create_geki_video(st.session_state.selected_odai, st.session_state.ans_list[i])
                 if path:
-                    st.video(path)
-                    with open(path, "rb") as f:
-                        st.download_button("保存", f, file_name=f"geki_{i}.mp4", key=f"dl_{i}")
+                    st.video(path); 
+                    with open(path, "rb") as f: st.download_button("保存", f, file_name=f"geki_{i}.mp4", key=f"dl_{i}")
 
 st.write("---")
 st.caption("「私が100%制御しています」")
