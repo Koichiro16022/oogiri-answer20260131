@@ -6,10 +6,9 @@ import numpy as np
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image, ImageDraw, ImageFont
-from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, AudioFileClip, CompositeAudioClip, concatenate_audioclips
+from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, AudioFileClip, CompositeAudioClip, concatenate_audioclips, AudioClip
 from gtts import gTTS
 import edge_tts
-from pydub import AudioSegment
 
 # --- 1. 基本設定 ---
 if "GEMINI_API_KEY" in st.secrets:
@@ -42,10 +41,14 @@ if 'odais' not in st.session_state: st.session_state.odais = []
 if 'selected_odai' not in st.session_state: st.session_state.selected_odai = ""
 if 'ans_list' not in st.session_state: st.session_state.ans_list = []
 
-# --- 3. 音声生成用ヘルパー (edge-tts 非同期 & 物理沈黙制御) ---
+# --- 3. 音声生成用ヘルパー (MoviePy純正で沈黙を作る) ---
 async def save_edge_voice(text, filename, voice_name, rate="+15%"):
     communicate = edge_tts.Communicate(text, voice_name, rate=rate)
     await communicate.save(filename)
+
+def make_silence(duration):
+    """MoviePy純正の機能で無音クリップを作成"""
+    return AudioClip(lambda t: [0, 0], duration=duration, fps=44100)
 
 def build_controlled_audio(full_text, mode="gtts"):
     """アンダースコアを解析して無音を挟んだ音声を構築"""
@@ -55,14 +58,12 @@ def build_controlled_audio(full_text, mode="gtts"):
     for i, part in enumerate(parts):
         if not part: continue
         
-        tmp_filename = f"part_{mode}_{i}.mp3"
         if '_' in part:
-            # アンダースコア1つにつき0.5秒の無音
-            duration_ms = len(part) * 500
-            silence = AudioSegment.silent(duration=duration_ms)
-            silence.export(tmp_filename, format="mp3")
-            clips.append(AudioFileClip(tmp_filename))
+            # アンダースコア1つにつき0.5秒の無音を生成
+            duration = len(part) * 0.5
+            clips.append(make_silence(duration))
         else:
+            tmp_filename = f"part_{mode}_{i}.mp3"
             if mode == "gtts":
                 tts = gTTS(part, lang='ja')
                 tts.save(tmp_filename)
@@ -82,7 +83,6 @@ def create_text_image(text, fontsize, color, pos=(960, 540)):
     except:
         return None
     
-    # 映像表示用：アンダースコアを全角スペースにして改行へ変換
     clean_display = text.replace("_", "　")
     display_text = clean_display.replace("　", "\n").replace(" ", "\n")
     
@@ -101,24 +101,23 @@ def create_text_image(text, fontsize, color, pos=(960, 540)):
 def create_geki_video(odai, answer):
     for f in [BASE_VIDEO, SOUND1, SOUND2]:
         if not os.path.exists(f):
-            st.error(f"素材ファイルが見当たりません: {f}")
+            st.error(f"素材が見当たりません: {f}")
             return None
     try:
         video = VideoFileClip(BASE_VIDEO).without_audio()
-        clean_text = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer).strip()
+        clean_ans = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer).strip()
         
-        # テロップ画像生成
         i1 = create_text_image(odai, 100, "black", pos=(960, 530)) 
         i2 = create_text_image(odai, 55, "black", pos=(880, 300))
-        i3 = create_text_image(clean_text, 120, "black", pos=(960, 500))
+        i3 = create_text_image(clean_ans, 120, "black", pos=(960, 500))
         
         c1 = ImageClip(np.array(i1)).set_start(2.0).set_end(8.0).set_duration(6.0)
         c2 = ImageClip(np.array(i2)).set_start(8.0).set_end(10.0).set_duration(2.0)
         c3 = ImageClip(np.array(i3)).set_start(10.0).set_end(16.0).set_duration(6.0)
 
-        # 音声生成（アンダースコア制御による物理連結）
+        # 音声の連結構築
         voice_odai_clip = build_controlled_audio(odai, mode="gtts")
-        voice_ans_clip = build_controlled_audio(clean_text, mode="edge")
+        voice_ans_clip = build_controlled_audio(clean_ans, mode="edge")
 
         audio_list = []
         if voice_odai_clip:
@@ -151,13 +150,11 @@ with col1:
     st.session_state.kw = st.text_input("KW", value=st.session_state.kw, label_visibility="collapsed")
 with col2:
     if st.button("消去"):
-        st.session_state.kw = ""
-        st.rerun()
+        st.session_state.kw = ""; st.rerun()
 with col3:
     if st.button("ランダム"):
         ws = ["AI", "孫", "無人島", "コンビニ", "サウナ", "SNS"]
-        st.session_state.kw = random.choice(ws)
-        st.rerun()
+        st.session_state.kw = random.choice(ws); st.rerun()
 
 if st.button("お題生成", use_container_width=True):
     with st.spinner("閃き中..."):
