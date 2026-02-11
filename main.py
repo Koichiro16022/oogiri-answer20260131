@@ -220,56 +220,18 @@ if rnd_col.button("ランダム"):
 if st.button("お題生成", use_container_width=True):
     with st.spinner("厳選中..."):
         m = genai.GenerativeModel(CHOSEN_MODEL)
-        # ★修正: プロンプトを強化してMarkdown記法を完全排除
-        prompt = f"""「{st.session_state.kw}」をテーマにした大喜利お題を3つ作れ。
-
-絶対に守るルール:
-- 「お題:」「**」「##」などの装飾は一切書くな
-- タイトル、説明文、挨拶は書くな
-- お題の文章だけを書け
-- 1行に1つのお題
-- 番号は不要
-- 各お題は疑問形で終わること
-
-正しい出力例:
-もし猫が人間だったら何て言う?
-スマホの充電が1%！どうする?
-コンビニで絶対買ってはいけないものとは?
-"""
+        prompt = f"「{st.session_state.kw}」をテーマにした大喜利お題を3つ作れ。お題だけを3行で出力。"
         r = m.generate_content(prompt)
         
-        # ★修正: フィルタリングを大幅強化
-        lines = [l.strip() for l in r.text.split('\n') if l.strip()]
-        odais = []
+        # デバッグ：Geminiが生成した生テキストを表示
+        st.write("### 🔍 Geminiが生成したテキスト:")
+        st.code(r.text)
         
-        for line in lines:
-            # Markdown記法、装飾を除去
-            if line.startswith(('#', '*', '-', '>', '`')):
-                continue
-            # 「お題」「テーマ」などの説明文を除外
-            if any(word in line[:5] for word in ['お題', 'テーマ', '問題', '質問']):
-                continue
-            # コロン「:」「:**」を含む行を除外
-            if ':' in line or '：' in line:
-                continue
-            
-            # 番号とMarkdown記号を削除
-            cleaned = re.sub(r'^[0-9０-９\.\s\*\*]+', '', line).strip()
-            cleaned = cleaned.replace('**', '').replace('*', '')
-            
-            # 10文字以上の行のみ採用
-            if len(cleaned) >= 10:
-                odais.append(cleaned)
-        
-        st.session_state.odais = odais[:3]
-        
-        # お題が取得できなかった場合の処理
-        if not st.session_state.odais:
-            st.error("お題の生成に失敗しました。もう一度試してください。")
-        
-        st.session_state.selected_odai = ""
-        st.session_state.ans_list = []
-        st.rerun()
+        st.write("### 📝 各行の内容:")
+        lines = r.text.split('\n')
+        for i, line in enumerate(lines):
+            st.write(f"**行{i+1}:** `{line}`")
+
 
 if st.session_state.odais:
     st.write("### 📝 お題を選択してください")
