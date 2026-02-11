@@ -401,8 +401,10 @@ if st.session_state.selected_odai:
             for line in all_lines:
                 if re.match(r'^[0-9０-９]+[\.．、。\s]', line):
                     if not any(word in line[:20] for word in ['はい', '承知', 'それでは', '以下', '提案']):
-                        ans_raw.append(line)
-            
+                        # ★番号を削除してから追加
+                        cleaned_line = re.sub(r'^[0-9０-９]+[\.．、。\s]+', '', line).strip()
+                        ans_raw.append(cleaned_line)
+                                    
             st.session_state.ans_list = ans_raw[:20]
             st.session_state.pronounce_list = ans_raw[:20]
             st.rerun()
