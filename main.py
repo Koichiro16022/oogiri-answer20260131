@@ -223,14 +223,37 @@ if st.button("お題生成", use_container_width=True):
         prompt = f"「{st.session_state.kw}」をテーマにした大喜利お題を3つ作れ。お題だけを3行で出力。"
         r = m.generate_content(prompt)
         
-        # デバッグ：Geminiが生成した生テキストを表示
-        st.write("### 🔍 Geminiが生成したテキスト:")
-        st.code(r.text)
-        
-        st.write("### 📝 各行の内容:")
+        # 各行から番号を削除してお題だけを抽出
         lines = r.text.split('\n')
-        for i, line in enumerate(lines):
-            st.write(f"**行{i+1}:** `{line}`")
+        odais = []
+        
+        for line in lines:
+            line = line.strip()
+            
+            # 空行はスキップ
+            if not line:
+                continue
+            
+            # 番号を削除（1. や 2. など）
+            cleaned = re.sub(r'^[0-9０-９]+[\.．\s]+', '', line).strip()
+            
+            # 10文字以上の有効なお題のみ追加
+            if len(cleaned) >= 10:
+                odais.append(cleaned)
+        
+        # お題をセッションに保存
+        st.session_state.odais = odais[:3]
+        
+        # お題が取得できなかった場合
+        if not st.session_state.odais:
+            st.error("お題の生成に失敗しました。もう一度試してください。")
+        
+        # リセット
+        st.session_state.selected_odai = ""
+        st.session_state.ans_list = []
+        st.session_state.pronounce_list = []
+        st.rerun()
+
 
 
 if st.session_state.odais:
