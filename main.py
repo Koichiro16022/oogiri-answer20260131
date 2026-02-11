@@ -329,33 +329,40 @@ if st.session_state.ans_list:
     st.write("### 📋 回答一覧")
     
     for i in range(len(st.session_state.ans_list)):
-        col_t, col_g = st.columns([9, 1])
+        # ★修正: columnsを使って横並びレイアウト
+        col_text, col_button = st.columns([9, 1])
         
-        st.session_state.ans_list[i] = col_t.text_input(
-            f"字幕案 {i+1}（スペースで改行）", 
-            value=st.session_state.ans_list[i], 
-            key=f"disp_{i}"
-        )
-        st.session_state.pronounce_list[i] = st.text_input(
-            f"読み案 {i+1}（_で無音のタメ）", 
-            value=st.session_state.pronounce_list[i], 
-            key=f"pron_{i}", 
-            label_visibility="collapsed"
-        )
-        st.markdown('<p class="pronounce-box">💡 読み修正（例: なん、いい、_でタメ）</p>', unsafe_allow_html=True)
+        # 左側：テキスト入力欄（字幕と読み）
+        with col_text:
+            st.session_state.ans_list[i] = st.text_input(
+                f"字幕案 {i+1}（スペースで改行）", 
+                value=st.session_state.ans_list[i], 
+                key=f"disp_{i}"
+            )
+            st.session_state.pronounce_list[i] = st.text_input(
+                f"読み案 {i+1}（_で無音のタメ）", 
+                value=st.session_state.pronounce_list[i], 
+                key=f"pron_{i}", 
+                label_visibility="collapsed"
+            )
+            st.markdown('<p class="pronounce-box">💡 読み修正（例: なん、いい、_でタメ）</p>', unsafe_allow_html=True)
         
-        if col_g.button("生成", key=f"b_{i}"):
-            with st.spinner("動画生成中..."):
-                path = create_geki_video(
-                    st.session_state.selected_odai, 
-                    st.session_state.selected_odai_pron, 
-                    st.session_state.ans_list[i], 
-                    st.session_state.pronounce_list[i]
-                )
-                if path:
-                    st.video(path)
-                    with open(path, "rb") as f:
-                        st.download_button("💾 保存", f, file_name=f"geki_{i}.mp4", key=f"dl_{i}")
+        # 右側：生成ボタン
+        with col_button:
+            # ★修正: ボタンの位置を調整するため空白を追加
+            st.write("")  # 1行分の空白
+            if st.button("生成", key=f"b_{i}"):
+                with st.spinner("動画生成中..."):
+                    path = create_geki_video(
+                        st.session_state.selected_odai, 
+                        st.session_state.selected_odai_pron, 
+                        st.session_state.ans_list[i], 
+                        st.session_state.pronounce_list[i]
+                    )
+                    if path:
+                        st.video(path)
+                        with open(path, "rb") as f:
+                            st.download_button("💾 保存", f, file_name=f"geki_{i}.mp4", key=f"dl_{i}")
 
 st.write("---")
 st.caption("「私が100%制御しています」")
