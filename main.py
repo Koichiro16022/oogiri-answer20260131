@@ -351,6 +351,7 @@ if st.session_state.ans_list:
         with col_button:
             # ★修正: ボタンの位置を調整するため空白を追加
             st.write("")  # 1行分の空白
+            st.write("")  # 2行目（追加）
             if st.button("生成", key=f"b_{i}"):
                 with st.spinner("動画生成中..."):
                     path = create_geki_video(
