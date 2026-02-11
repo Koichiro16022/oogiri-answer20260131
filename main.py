@@ -10,7 +10,7 @@ from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, AudioFi
 from gtts import gTTS
 import edge_tts
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 # --- 1. 基本設定 ---
 if "GEMINI_API_KEY" in st.secrets:
@@ -23,6 +23,7 @@ FONT_PATH = "NotoSansJP-Bold.ttf"
 BASE_VIDEO = "template.mp4"
 SOUND1 = "sound1.mp3"
 SOUND2 = "sound2.mp3"
+JST = timezone(timedelta(hours=9))  # ★日本時間用
 
 st.set_page_config(page_title="大喜利アンサー", layout="wide")
 
@@ -247,10 +248,10 @@ with st.sidebar:
     st.write("---")
     st.subheader("💾 データ管理")
     
-    # エクスポート
+    # エクスポート（★日本時間に修正）
     if st.session_state.golden_examples:
         json_str = json.dumps(st.session_state.golden_examples, ensure_ascii=False, indent=2)
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now(JST).strftime('%Y%m%d_%H%M%S')  # ★JST適用
         st.download_button(
             "📥 エクスポート",
             json_str,
