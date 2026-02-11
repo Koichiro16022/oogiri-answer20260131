@@ -9,6 +9,8 @@ from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, AudioFileClip, CompositeAudioClip, concatenate_audioclips, AudioClip
 from gtts import gTTS
 import edge_tts
+import json
+from datetime import datetime
 
 # --- 1. 基本設定 ---
 if "GEMINI_API_KEY" in st.secrets:
@@ -74,17 +76,48 @@ if 'selected_odai_pron' not in st.session_state: st.session_state.selected_odai_
 if 'ans_list' not in st.session_state: st.session_state.ans_list = []
 if 'pronounce_list' not in st.session_state: st.session_state.pronounce_list = []
 
-if 'golden_examples' not in st.session_state:
-    st.session_state.golden_examples = [
-        {"odai": "目に入れても痛くない孫におじいちゃんがブチギレ。いったい何があった？", "ans": "おじいちゃんの入れ歯をメルカリで『ビンテージ雑貨』として出品していた"},
-        {"odai": "この番組絶対ドッキリだろ！なぜ気付いた？", "ans": "通行人10人全員がよく見たらエキストラのバイト募集で見かけた顔だった"},
-        {"odai": "ハゲてて良かった～なぜそう思った？", "ans": "職質のプロに『君、隠し事なさそうな頭してるね』とスルーされた"},
-        {"odai": "ハゲてて良かった～なぜそう思った？", "ans": "美容師さんにお任せでと言ったら3秒で会計が終わった"},
-        {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "家族写真のお母さんの顔の部分だけに執拗に『ブサイクになるフィルター』をかけて保存した"},
-        {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "おばさんその服カーテンと同じ柄ですね！と明るく指摘した"}
+# ★学習データの読み込み
+DATA_FILE = "learning_data.json"
+
+def load_data():
+    """起動時に学習データを読み込む"""
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                # styleがないデータには"通常"を自動補完
+                for item in data:
+                    if 'style' not in item:
+                        item['style'] = '通常'
+                return data
+        except Exception as e:
+            st.error(f"データ読み込みエラー: {e}")
+    
+    # デフォルトデータ
+    return [
+        {"odai": "目に入れても痛くない孫におじいちゃんがブチギレ。いったい何があった？", "ans": "おじいちゃんの入れ歯をメルカリで『ビンテージ雑貨』として出品していた", "style": "通常"},
+        {"odai": "この番組絶対ドッキリだろ！なぜ気付いた？", "ans": "通行人10人全員がよく見たらエキストラのバイト募集で見かけた顔だった", "style": "通常"},
+        {"odai": "ハゲてて良かった～なぜそう思った？", "ans": "職質のプロに『君、隠し事なさそうな頭してるね』とスルーされた", "style": "通常"},
+        {"odai": "ハゲてて良かった～なぜそう思った？", "ans": "美容師さんにお任せでと言ったら3秒で会計が終わった", "style": "通常"},
+        {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "家族写真のお母さんの顔の部分だけに執拗に『ブサイクになるフィルター』をかけて保存した", "style": "通常"},
+        {"odai": "母親が私の友達に大激怒。いったい何があった？", "ans": "おばさんその服カーテンと同じ柄ですね！と明るく指摘した", "style": "通常"}
     ]
 
+if 'golden_examples' not in st.session_state:
+    st.session_state.golden_examples = load_data()
+
 # --- 3. ロジック ---
+
+def save_data():
+    """学習データを自動保存"""
+    try:
+        with open(DATA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(st.session_state.golden_examples, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception as e:
+        st.error(f"保存エラー: {e}")
+        return False
+
 async def save_edge_voice(text, filename, voice_name, rate="+15%"):
     communicate = edge_tts.Communicate(text, voice_name, rate=rate)
     await communicate.save(filename)
@@ -187,23 +220,89 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio):
 # --- 4. サイドバー ---
 with st.sidebar:
     st.header("🧠 感性同期・追加学習")
+    
+    # 学習フォーム
     with st.form("learning_form", clear_on_submit=True):
         new_odai = st.text_area("お題を追加", height=100)
         new_ans = st.text_input("回答を追加")
         if st.form_submit_button("感性を覚えさせる"):
             if new_odai and new_ans:
-                is_duplicate = any(ex["odai"] == new_odai and ex["ans"] == new_ans for ex in st.session_state.golden_examples)
+                is_duplicate = any(
+                    ex["odai"] == new_odai and ex["ans"] == new_ans 
+                    for ex in st.session_state.golden_examples
+                )
                 if not is_duplicate:
-                    st.session_state.golden_examples.append({"odai": new_odai, "ans": new_ans})
-                    st.success("登録しました。")
+                    st.session_state.golden_examples.append({
+                        "odai": new_odai, 
+                        "ans": new_ans, 
+                        "style": "通常"
+                    })
+                    if save_data():
+                        st.success("✅ 登録し、保存しました")
+                    else:
+                        st.error("❌ 登録しましたが保存に失敗しました")
                 else:
-                    st.warning("すでに登録されています。")
+                    st.warning("⚠️ すでに登録されています")
     
-    st.write(f"### 学習済みリスト ({len(st.session_state.golden_examples)}件)")
-    for i, ex in enumerate(reversed(st.session_state.golden_examples[-5:])):
-        with st.expander(f"傑作 {i+1}"):
-            st.write(f"**お題**: {ex['odai']}")
-            st.write(f"**回答**: {ex['ans']}")
+    st.write("---")
+    st.subheader("💾 データ管理")
+    
+    # エクスポート
+    if st.session_state.golden_examples:
+        json_str = json.dumps(st.session_state.golden_examples, ensure_ascii=False, indent=2)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        st.download_button(
+            "📥 エクスポート",
+            json_str,
+            file_name=f"learning_data_{timestamp}.json",
+            mime="application/json",
+            use_container_width=True
+        )
+    
+    # インポート
+    uploaded_file = st.file_uploader("📁 インポート", type=['json'])
+    
+    if uploaded_file is not None:
+        try:
+            imported_data = json.load(uploaded_file)
+            
+            for item in imported_data:
+                if 'style' not in item:
+                    item['style'] = '通常'
+            
+            st.info(f"📊 {len(imported_data)}件のデータが見つかりました")
+            st.caption("統合方法を選択してください")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if st.button("➕ 追加", use_container_width=True, help="既存データを残して追加します（重複は自動除外）"):
+                    added_count = 0
+                    for item in imported_data:
+                        is_duplicate = any(
+                            ex["odai"] == item["odai"] and ex["ans"] == item["ans"]
+                            for ex in st.session_state.golden_examples
+                        )
+                        if not is_duplicate:
+                            st.session_state.golden_examples.append(item)
+                            added_count += 1
+                    
+                    if save_data():
+                        if added_count > 0:
+                            st.success(f"✅ {added_count}件を追加しました")
+                        if len(imported_data) - added_count > 0:
+                            st.info(f"ℹ️ 重複{len(imported_data)-added_count}件を除外しました")
+                        st.rerun()
+            
+            with col2:
+                if st.button("🔄 上書き", use_container_width=True, help="既存データを削除して置き換えます"):
+                    st.session_state.golden_examples = imported_data
+                    if save_data():
+                        st.success(f"✅ {len(imported_data)}件で上書きしました")
+                        st.rerun()
+        
+        except Exception as e:
+            st.error(f"❌ インポートエラー: {e}")
 
 # --- 5. メインUI ---
 st.title("大喜利アンサー")
@@ -223,38 +322,26 @@ if st.button("お題生成", use_container_width=True):
         prompt = f"「{st.session_state.kw}」をテーマにした大喜利お題を3つ作れ。お題だけを3行で出力。"
         r = m.generate_content(prompt)
         
-        # 各行から番号を削除してお題だけを抽出
         lines = r.text.split('\n')
         odais = []
         
         for line in lines:
             line = line.strip()
-            
-            # 空行はスキップ
             if not line:
                 continue
-            
-            # 番号を削除（1. や 2. など）
             cleaned = re.sub(r'^[0-9０-９]+[\.．\s]+', '', line).strip()
-            
-            # 10文字以上の有効なお題のみ追加
             if len(cleaned) >= 10:
                 odais.append(cleaned)
         
-        # お題をセッションに保存
         st.session_state.odais = odais[:3]
         
-        # お題が取得できなかった場合
         if not st.session_state.odais:
             st.error("お題の生成に失敗しました。もう一度試してください。")
         
-        # リセット
         st.session_state.selected_odai = ""
         st.session_state.ans_list = []
         st.session_state.pronounce_list = []
         st.rerun()
-
-
 
 if st.session_state.odais:
     st.write("### 📝 お題を選択してください")
@@ -269,7 +356,6 @@ if st.session_state.odais:
 if st.session_state.selected_odai:
     st.write("---")
     
-    # ★修正: お題入力セクションを明確に
     st.subheader("🎯 お題の設定")
     st.session_state.selected_odai = st.text_input(
         "お題確定（スペースで改行）", 
@@ -281,13 +367,11 @@ if st.session_state.selected_odai:
     )
     st.markdown('<p class="odai-pronounce">💡 お題の発音修正（例: なん、いい、_でタメ）</p>', unsafe_allow_html=True)
     
-    # ★修正: スタイル選択とボタンを明確に分離
     st.write("---")
     st.subheader("🎭 回答の生成")
     
     style = st.selectbox("ユーモアの種類", ["通常", "知的", "シュール", "ブラック"])
     
-    # ★修正: ボタンの配置を明確に
     if st.button("🚀 回答20案生成", type="primary", use_container_width=True):
         with st.spinner("爆笑を追求中..."):
             m = genai.GenerativeModel(CHOSEN_MODEL)
@@ -314,9 +398,7 @@ if st.session_state.selected_odai:
             ans_raw = []
             
             for line in all_lines:
-                # 番号で始まる行のみ
                 if re.match(r'^[0-9０-９]+[\.．、。\s]', line):
-                    # 挨拶を含む行を除外
                     if not any(word in line[:20] for word in ['はい', '承知', 'それでは', '以下', '提案']):
                         ans_raw.append(line)
             
@@ -329,10 +411,8 @@ if st.session_state.ans_list:
     st.write("### 📋 回答一覧")
     
     for i in range(len(st.session_state.ans_list)):
-        # ★修正: columnsを使って横並びレイアウト
         col_text, col_button = st.columns([9, 1])
         
-        # 左側：テキスト入力欄（字幕と読み）
         with col_text:
             st.session_state.ans_list[i] = st.text_input(
                 f"字幕案 {i+1}（スペースで改行）", 
@@ -347,11 +427,9 @@ if st.session_state.ans_list:
             )
             st.markdown('<p class="pronounce-box">💡 読み修正（例: なん、いい、_でタメ）</p>', unsafe_allow_html=True)
         
-        # 右側：生成ボタン
         with col_button:
-            # ★修正: ボタンの位置を調整するため空白を追加
-            st.write("")  # 1行分の空白
-            st.write("")  # 2行目（追加）
+            st.write("")
+            st.write("")
             if st.button("生成", key=f"b_{i}"):
                 with st.spinner("動画生成中..."):
                     path = create_geki_video(
