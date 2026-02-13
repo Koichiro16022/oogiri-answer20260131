@@ -405,6 +405,11 @@ with st.sidebar:
 # --- 5. メインUI ---
 st.title("大喜利アンサー")
 
+# ★追加：動画形式を選択するスイッチ
+video_mode = st.radio("動画形式を選択してください", ["横動画 (16:9)", "縦動画 (9:16)"], horizontal=True)
+
+st.write("---") # 区切り線
+
 kw_col, clr_col, rnd_col = st.columns([5, 1, 1])
 st.session_state.kw = kw_col.text_input("キーワード入力", value=st.session_state.kw, label_visibility="collapsed")
 if clr_col.button("消去"): 
@@ -556,7 +561,8 @@ if st.session_state.ans_list:
                         st.session_state.selected_odai, 
                         st.session_state.selected_odai_pron, 
                         st.session_state.ans_list[i], 
-                        st.session_state.pronounce_list[i]
+                        st.session_state.pronounce_list[i],
+                        video_mode  # ★ここに追加した video_mode を渡します
                     )
                     # ★変更点1：動画プレイヤーをここで出さず、パスだけを保存する
                     if path:
