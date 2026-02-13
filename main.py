@@ -258,6 +258,38 @@ with st.sidebar:
     
     st.write("---")
     st.subheader("💾 データ管理")
+
+    # --- 追加：学習データ編集・削除機能 ---
+    if st.session_state.golden_examples:
+        with st.expander("📝 登録済みデータの編集・削除"):
+            for idx, item in enumerate(st.session_state.golden_examples):
+                col_e1, col_e2, col_e3 = st.columns([2, 5, 1])
+                
+                # ユーモア種類の変更
+                new_item_style = col_e1.selectbox(
+                    f"種別 {idx}", ["通常", "知的", "ブラック"], 
+                    index=["通常", "知的", "ブラック"].index(item.get("style", "通常")),
+                    key=f"edit_style_{idx}", label_visibility="collapsed"
+                )
+                
+                # 回答内容の修正
+                new_item_ans = col_e2.text_input(
+                    f"回答 {idx}", value=item["ans"], 
+                    key=f"edit_ans_{idx}", label_visibility="collapsed"
+                )
+                
+                # 削除ボタン
+                if col_e3.button("❌", key=f"del_{idx}"):
+                    st.session_state.golden_examples.pop(idx)
+                    save_data()
+                    st.rerun()
+                
+                # 値が変更されたら即座に反映
+                if new_item_style != item.get("style") or new_item_ans != item["ans"]:
+                    st.session_state.golden_examples[idx]["style"] = new_item_style
+                    st.session_state.golden_examples[idx]["ans"] = new_item_ans
+                    save_data()
+    # ------------------------------------
     
     # エクスポート（★日本時間に修正）
     if st.session_state.golden_examples:
