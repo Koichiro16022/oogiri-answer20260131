@@ -143,7 +143,7 @@ def build_controlled_audio(full_text, mode="gtts"):
 
 # --- 修正：引数に canvas_size を追加し、サイズを可変にする ---
 def create_text_image(text, fontsize, color, pos, canvas_size=(1920, 1080)):
-    # 固定の (1920, 1080) ではなく、渡された canvas_size を使う
+    # キャンバス作成
     img = Image.new("RGBA", canvas_size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
     try: 
@@ -151,47 +151,27 @@ def create_text_image(text, fontsize, color, pos, canvas_size=(1920, 1080)):
     except: 
         font = ImageFont.load_default()
     
+    # テキストのクリーニングと改行処理
     clean_display = text.replace("_", "")
     display_text = clean_display.replace("　", "\n").replace(" ", "\n")
     lines = [l for l in display_text.split("\n") if l.strip()]
     if not lines: lines = [" "]
     
     line_spacing = 15
+    # 各行のサイズを計算
     line_heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
     total_height = sum(line_heights) + (len(lines) - 1) * line_spacing
     
+    # 描画開始位置（中央揃え）
     current_y = pos[1] - total_height // 2
     for i, line in enumerate(lines):
         bbox = draw.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
+        # 指定された座標(pos)を基準に描画
         draw.text((pos[0] - line_w // 2, current_y), line, font=font, fill=color)
         current_y += line_heights[i] + line_spacing
     
     return np.array(img)
-    draw = ImageDraw.Draw(img)
-    try: 
-        font = ImageFont.truetype(FONT_PATH, fontsize)
-    except: 
-        font = ImageFont.load_default()
-    
-    clean_display = text.replace("_", "")
-    display_text = clean_display.replace("　", "\n").replace(" ", "\n")
-    lines = [l for l in display_text.split("\n") if l.strip()]
-    if not lines: lines = [" "]
-    
-    line_spacing = 15
-    line_heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
-    total_height = sum(line_heights) + (len(lines) - 1) * line_spacing
-    
-    current_y = pos[1] - total_height // 2
-    for i, line in enumerate(lines):
-        bbox = draw.textbbox((0, 0), line, font=font)
-        line_w = bbox[2] - bbox[0]
-        draw.text((pos[0] - line_w // 2, current_y), line, font=font, fill=color)
-        current_y += line_heights[i] + line_spacing
-    
-    return np.array(img)
-
 # --- 修正後：引数に video_mode を追加し、縦横の設定を分岐 ---
 
 def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, video_mode):
