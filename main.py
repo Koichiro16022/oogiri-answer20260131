@@ -226,13 +226,24 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
         # テンプレートを current_template に変更
         video = VideoFileClip(current_template).without_audio()
         
+        # --- 修正後：文字数に応じた自動サイズ調整ロジック ---
         clean_ans_disp = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer_display).strip()
         clean_ans_aud = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer_audio).strip()
+
+        # 文字数をカウント
+        ans_len = len(clean_ans_disp)
         
-        # ★引数 canvas_size と 新しく定義した pos を渡す
+        if ans_len <= 10:
+            ans_fontsize = 120  # 10文字以内：特大
+        elif ans_len <= 20:
+            ans_fontsize = 100  # 20文字以内：標準
+        else:
+            ans_fontsize = 80   # 21文字以上：小（はみ出し防止）
+
+        # i3 のフォントサイズに ans_fontsize を適用
         i1 = create_text_image(odai_display, 100, "black", pos=pos_odai_main, canvas_size=target_size) 
         i2 = create_text_image(odai_display, 55, "black", pos=pos_odai_sub, canvas_size=target_size)
-        i3 = create_text_image(clean_ans_disp, 120, "black", pos=pos_ans, canvas_size=target_size)
+        i3 = create_text_image(clean_ans_disp, ans_fontsize, "black", pos=pos_ans, canvas_size=target_size)
         
         c1 = ImageClip(i1).set_start(2.0).set_end(8.0)
         c2 = ImageClip(i2).set_start(8.0).set_end(10.0)
