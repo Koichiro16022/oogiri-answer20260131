@@ -571,24 +571,27 @@ if st.session_state.ans_list:
         # ★変更点2：with col_button の外（インデントを戻した位置）で大きく表示する
         # ★修正箇所：if文の直後の行をすべて1段下げます
         # ★ここから修正（ifの前のスペースを調整して with col_button の外に出します）
+        # --- 修正：動画表示と保存ボタンのブロック ---
         if f"temp_video_{i}" in st.session_state:
             video_path = st.session_state[f"temp_video_{i}"]
             
-            # --- プレビュー表示の分岐（表示だけを分ける） ---
+            # 1. 表示サイズだけを条件分岐させる
             if video_mode == "縦動画 (9:16)":
+                # 縦動画は幅を300pxに制限して、全体を見やすくする
                 st.markdown('<div style="max-width: 300px;">', unsafe_allow_html=True)
                 st.video(video_path)
                 st.markdown('</div>', unsafe_allow_html=True)
             else:
+                # 横動画は今まで通り全幅表示
                 st.video(video_path)
             
-            # --- 保存ボタンは共通（ifの外に出すことで重複を回避） ---
+            # 2. 保存ボタンは if の外側に1つだけ書く（これでKeyの重複を防ぐ）
             with open(video_path, "rb") as f:
                 st.download_button(
                     "💾 保存", 
                     f, 
                     file_name=video_path, 
-                    key=f"dl_{i}",  # これでKeyは1つだけになります
+                    key=f"dl_{i}",  # これでIDが100%一意になります
                     use_container_width=True
                 )
                 st.download_button(
