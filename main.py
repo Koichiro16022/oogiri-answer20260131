@@ -207,7 +207,7 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
         # 縦動画用の配置（中央付近にレイアウト）
         pos_odai_main = (540, 850)   # お題（メイン）
         pos_odai_sub = (540, 300)    # お題（サブ・上部）
-        pos_ans = (540, 1000)        # 回答（中央やや下）
+        pos_ans = (540, 1150)        # 回答（中央やや下）
     else:
         # ★横動画の設定（今までの位置を維持）
         target_size = (1920, 1080)
