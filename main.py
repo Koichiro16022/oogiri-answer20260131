@@ -574,43 +574,48 @@ if st.session_state.ans_list:
         # --- 修正：動画表示と保存ボタンのブロック ---
         # --- 修正：動画表示と保存ボタンのブロック（強制サイズ固定版） ---
         # --- 修正：縦動画プレビュー時の全体幅制限 ---
+        # --- 修正：動画表示と保存ボタンのブロック（縦横両方のサイズを最適化） ---
         if f"temp_video_{i}" in st.session_state:
             video_path = st.session_state[f"temp_video_{i}"]
             
             if video_mode == "縦動画 (9:16)":
-                # 画面中央のメインコンテンツ幅を強制的に絞るCSS
+                # 【縦動画】Koichiroさんの黄金設定
                 st.markdown(
                     """
                     <style>
-                        /* メインエリアの幅を制限 */
-                        div[data-testid="stMainBlockContainer"] {
-                            max-width: 1000px !important;
-                            margin: auto;
-                        }
-                        /* ビデオ自体の表示サイズを固定 */
-                        video {
-                            max-height: 500px;
-                            width: auto !important;
-                            margin: auto;
-                            display: block;
-                        }
+                        div[data-testid="stMainBlockContainer"] { max-width: 1000px !important; margin: auto; }
+                        video { max-height: 500px; width: auto !important; margin: auto; display: block; }
                     </style>
                     """, 
                     unsafe_allow_html=True
                 )
                 st.video(video_path)
             else:
-                # 横動画の時は、以前の wide 設定を活かすためにリセット
-                st.markdown("<style>div[data-testid='stMainBlockContainer'] { max-width: 100% !important; }</style>", unsafe_allow_html=True)
+                # 【横動画】ここを新しく制御！
+                st.markdown(
+                    """
+                    <style>
+                        /* 横動画の時は幅を広めに戻しつつ、高さを抑える */
+                        div[data-testid="stMainBlockContainer"] { max-width: 1200px !important; margin: auto; }
+                        video { 
+                            max-height: 450px; /* ここでお好みの高さに制限 */
+                            width: auto !important; 
+                            margin: auto; 
+                            display: block; 
+                        }
+                    </style>
+                    """, 
+                    unsafe_allow_html=True
+                )
                 st.video(video_path)
             
-            # 保存ボタン
+            # 保存ボタン（共通）
             with open(video_path, "rb") as f:
                 st.download_button(
                     "💾 保存", 
                     f, 
                     file_name=video_path, 
-                    key=f"dl_final_fixed_v4_{i}",
+                    key=f"dl_final_perfect_{i}",
                     use_container_width=True
                 )
 st.write("---")
