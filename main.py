@@ -589,7 +589,7 @@ if st.session_state.ans_list:
                         }
                         /* ビデオ自体の表示サイズを固定 */
                         video {
-                            max-height: 700px;
+                            max-height: 500px;
                             width: auto !important;
                             margin: auto;
                             display: block;
