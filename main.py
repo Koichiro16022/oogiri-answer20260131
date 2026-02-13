@@ -226,7 +226,7 @@ with st.sidebar:
     # 学習フォーム
     with st.form("learning_form", clear_on_submit=True):
         # --- 修正後 ---
-        new_odai = st.text_area("お題を追加", height=100, placeholder="ここに新しいお題を入力してください...")
+        new_odai = st.text_area("お題を追加", height=150, placeholder="ここに新しいお題を入力してください...")
         
         # --- 修正後 ---
         new_ans = st.text_area("回答を追加", height=150, placeholder="ここに新しい回答を入力してください...")
