@@ -584,12 +584,12 @@ if st.session_state.ans_list:
                     <style>
                         /* メインエリアの幅を制限 */
                         div[data-testid="stMainBlockContainer"] {
-                            max-width: 800px !important;
+                            max-width: 1000px !important;
                             margin: auto;
                         }
                         /* ビデオ自体の表示サイズを固定 */
                         video {
-                            max-height: 800px;
+                            max-height: 900px;
                             width: auto !important;
                             margin: auto;
                             display: block;
