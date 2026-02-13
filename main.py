@@ -405,9 +405,16 @@ with st.sidebar:
 # --- 5. メインUI ---
 st.title("大喜利アンサー")
 
-# ★追加：動画形式を選択するスイッチ
-video_mode = st.radio("動画形式を選択してください", ["横動画 (16:9)", "縦動画 (9:16)"], horizontal=True)
+# ★修正：初期状態を「縦動画」にし、リロードしても選択を保持する
+if "video_mode_selector" not in st.session_state:
+    st.session_state.video_mode_selector = "縦動画 (9:16)"
 
+video_mode = st.radio(
+    "動画形式を選択してください", 
+    ["縦動画 (9:16)", "横動画 (16:9)"], # 縦を左側に配置（デフォルト）
+    key="video_mode_selector",        # このKeyで選択を自動記憶
+    horizontal=True
+)
 st.write("---") # 区切り線
 
 kw_col, clr_col, rnd_col = st.columns([5, 1, 1])
