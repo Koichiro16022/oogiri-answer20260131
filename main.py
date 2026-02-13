@@ -442,10 +442,15 @@ if st.session_state.ans_list:
                         st.session_state.ans_list[i], 
                         st.session_state.pronounce_list[i]
                     )
+                    # ★変更点1：動画プレイヤーをここで出さず、パスだけを保存する
                     if path:
-                        st.video(path)
-                        with open(path, "rb") as f:
-                            st.download_button("💾 保存", f, file_name=f"geki_{i}.mp4", key=f"dl_{i}")
+                        st.session_state[f"temp_video_{i}"] = path
 
+        # ★変更点2：with col_button の外（インデントを戻した位置）で大きく表示する
+        if f"temp_video_{i}" in st.session_state:
+            video_path = st.session_state[f"temp_video_{i}"]
+            st.video(video_path)
+            with open(video_path, "rb") as f:
+                st.download_button("💾 保存", f, file_name=f"geki_{i}.mp4", key=f"dl_{i}")
 st.write("---")
 st.caption("「私が100%制御しています」")
