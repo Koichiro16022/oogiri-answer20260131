@@ -114,7 +114,7 @@ def save_data():
         st.error(f"保存エラー: {e}")
         return False
 
-async def save_edge_voice(text, filename, voice_name, rate="+15%"):
+async def save_edge_voice(text, filename, voice_name, rate="+20%"):
     communicate = edge_tts.Communicate(text, voice_name, rate=rate)
     await communicate.save(filename)
 
