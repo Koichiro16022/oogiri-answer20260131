@@ -574,23 +574,22 @@ if st.session_state.ans_list:
         if f"temp_video_{i}" in st.session_state:
             video_path = st.session_state[f"temp_video_{i}"]
             
-            # --- プレビューサイズの制御 ---
+            # --- プレビュー表示の分岐（表示だけを分ける） ---
             if video_mode == "縦動画 (9:16)":
-                # 縦動画は幅を絞って、全体が見えるようにする
-                st.video(video_path, format="video/mp4", start_time=0)
-                # もしこれでも大きい場合は、以下のCSSを適用したdivで囲む方法もありますが、
-                # まずは標準の st.video で確認してください。
+                st.markdown('<div style="max-width: 300px;">', unsafe_allow_html=True)
+                st.video(video_path)
+                st.markdown('</div>', unsafe_allow_html=True)
             else:
-                # 横動画は今まで通り
                 st.video(video_path)
             
+            # --- 保存ボタンは共通（ifの外に出すことで重複を回避） ---
             with open(video_path, "rb") as f:
                 st.download_button(
                     "💾 保存", 
                     f, 
                     file_name=video_path, 
-                    key=f"dl_{i}",
-                    use_container_width=True # ボタンを横いっぱいに広げて押しやすく
+                    key=f"dl_{i}",  # これでKeyは1つだけになります
+                    use_container_width=True
                 )
                 st.download_button(
                     "💾 保存", 
