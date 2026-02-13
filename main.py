@@ -28,6 +28,8 @@ JST = timezone(timedelta(hours=9))  # ★日本時間用
 st.set_page_config(page_title="大喜利アンサー", layout="wide")
 
 # UIデザインのカスタマイズ
+# --- 修正後：文字をすべて黒に統一、極太にして視認性を最大化 ---
+
 st.markdown("""
     <style>
     .main { background-color: #001220; color: #E5E5E5; }
@@ -35,36 +37,29 @@ st.markdown("""
     div.stButton > button:first-child { background: linear-gradient(135deg, #FFD700 0%, #E5E5E5 100%); color: #001220; }
     .stVideo { max-width: 100%; margin: auto; }
     
-    /* 注釈テキスト */
-    .pronounce-box { 
-        font-size: 0.8rem; 
-        color: #FFD700 !important; 
+    /* 注釈テキストを黒に変更 */
+    .pronounce-box, .odai-pronounce { 
+        font-size: 0.85rem; 
+        color: #000000 !important; 
         margin-top: -10px; 
         margin-bottom: 10px; 
-        font-weight: bold;
-    }
-    .odai-pronounce { 
-        font-size: 0.85rem; 
-        color: #00FFCC !important; 
-        margin-top: -15px; 
-        margin-bottom: 10px; 
-        font-weight: bold;
+        font-weight: 900;
     }
     
-    /* 入力欄のラベル */
+    /* 入力欄のラベル（説明文字）を黒に変更 */
     .stTextInput label, .stTextArea label {
-        color: #E5E5E5 !important;
-        font-size: 1rem !important;
-        font-weight: 700 !important;
+        color: #000000 !important;
+        font-size: 1.1rem !important;
+        font-weight: 900 !important;
         margin-bottom: 5px;
     }
 
-    /* 入力欄の背景色 */
+    /* 入力欄の中の文字色もより濃いネイビーに */
     div[data-baseweb="input"] > div, div[data-baseweb="base-input"] > textarea {
         background-color: #E1F5FE !important;
-        color: #01579B !important;
+        color: #001220 !important;
         border-radius: 4px;
-        font-weight: 600;
+        font-weight: 700;
     }
     </style>
     """, unsafe_allow_html=True)
