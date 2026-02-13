@@ -239,6 +239,8 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
         # 1. お題（メイン）のサイズ調整
         # --- 修正：すべてのテキスト（メイン・サブ・回答）を自動調整 ---
         
+        # --- 決定版：すべてのテキストを自動調整（重複を排除） ---
+        
         # 1. お題（メイン：i1）のサイズ調整
         odai_len = len(odai_display)
         if odai_len <= 10:
@@ -250,14 +252,14 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
         else:
             odai_main_fontsize = 65
 
-        # 2. お題（サブ・背景パネル用：i2）のサイズ調整 ★ここを新設
-        # メインより一回り小さくしつつ、可変にします
+        # 2. お題（サブ・背景パネル用：i2）のサイズ調整
+        # ★ここを書き換えることでパネル内の文字サイズが確実に変わります
         if odai_len <= 10:
-            odai_sub_fontsize = 200   # 短い時は大きく80から200へ
+            odai_sub_fontsize = 100   # 短い時（200だと巨大すぎるので、まずは100程度を推奨）
         elif odai_len <= 20:
-            odai_sub_fontsize = 65   # 標準
+            odai_sub_fontsize = 75    # 標準
         else:
-            odai_sub_fontsize = 45   # 長い時は枠に収める
+            odai_sub_fontsize = 55    # 長い時
 
         # 3. 回答（i3）のサイズ調整
         ans_len = len(clean_ans_disp)
@@ -268,12 +270,9 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
         else:
             ans_fontsize = 80
 
-        # --- 画像生成（決定したフォントサイズをすべてに適用） ---
+        # --- 画像生成（決定したフォントサイズを反映） ---
         i1 = create_text_image(odai_display, odai_main_fontsize, "black", pos=pos_odai_main, canvas_size=target_size) 
-        
-        # i2 に新しく計算した odai_sub_fontsize を適用
         i2 = create_text_image(odai_display, odai_sub_fontsize, "black", pos=pos_odai_sub, canvas_size=target_size)
-        
         i3 = create_text_image(clean_ans_disp, ans_fontsize, "black", pos=pos_ans, canvas_size=target_size)
         
         c1 = ImageClip(i1).set_start(2.0).set_end(8.0)
