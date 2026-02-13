@@ -459,16 +459,16 @@ if st.session_state.ans_list:
                         st.session_state[f"temp_video_{i}"] = path
 
         # ★変更点2：with col_button の外（インデントを戻した位置）で大きく表示する
+        # ★修正箇所：if文の直後の行をすべて1段下げます
         if f"temp_video_{i}" in st.session_state:
-    video_path = st.session_state[f"temp_video_{i}"]
-    st.video(video_path)
-    with open(video_path, "rb") as f:
-        # ★修正：file_name を video_path（生成されたファイル名）にする
-        st.download_button(
-            "💾 保存", 
-            f, 
-            file_name=video_path, 
-            key=f"dl_{i}"
-        )
+            video_path = st.session_state[f"temp_video_{i}"]
+            st.video(video_path)
+            with open(video_path, "rb") as f:
+                st.download_button(
+                    "💾 保存", 
+                    f, 
+                    file_name=video_path, 
+                    key=f"dl_{i}"
+                )
 st.write("---")
 st.caption("「私が100%制御しています」")
