@@ -228,7 +228,9 @@ with st.sidebar:
         # --- 修正後 ---
         new_odai = st.text_area("お題を追加", height=100, placeholder="ここに新しいお題を入力してください...")
         
-        new_ans = st.text_input("回答を追加")
+        # --- 修正後 ---
+        new_ans = st.text_area("回答を追加", height=150, placeholder="ここに新しい回答を入力してください...")
+        
         if st.form_submit_button("感性を覚えさせる"):
             if new_odai and new_ans:
                 is_duplicate = any(
