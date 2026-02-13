@@ -586,19 +586,14 @@ if st.session_state.ans_list:
                 st.video(video_path)
             
             # 2. 保存ボタンは if の外側に1つだけ書く（これでKeyの重複を防ぐ）
+           # 2. 保存ボタンは 1つだけに絞る（これでKeyの重複を防ぐ）
             with open(video_path, "rb") as f:
                 st.download_button(
                     "💾 保存", 
                     f, 
                     file_name=video_path, 
-                    key=f"dl_{i}",  # これでIDが100%一意になります
+                    key=f"dl_v3_{i}",  # 念のため名前を少し変えておきます
                     use_container_width=True
-                )
-                st.download_button(
-                    "💾 保存", 
-                    f, 
-                    file_name=video_path, 
-                    key=f"dl_{i}"
                 )
 st.write("---")
 st.caption("「私が100%制御しています」")
