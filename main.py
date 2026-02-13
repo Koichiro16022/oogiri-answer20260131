@@ -259,7 +259,7 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
         elif odai_len <= 20:
             odai_sub_fontsize = 100    # ★ここを75から100へ
         elif odai_len <= 30:
-            odai_main_fontsize = 80    # ★ここを80へ
+            odai_sub_fontsize = 80    # ★ここを80へ
         else:
             odai_sub_fontsize = 65    # お題と合わせた
 
