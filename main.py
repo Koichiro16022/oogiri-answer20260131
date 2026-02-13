@@ -261,7 +261,7 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
         elif odai_len <= 30:
             odai_sub_fontsize = 80    # ★ここを80へ
         else:
-            odai_sub_fontsize = 65    # お題と合わせた
+            odai_sub_fontsize = 80    # お題と合わせた
 
         # 3. 回答（i3）のサイズ調整
         ans_len = len(clean_ans_disp)
