@@ -225,7 +225,9 @@ with st.sidebar:
     
     # 学習フォーム
     with st.form("learning_form", clear_on_submit=True):
-        new_odai = st.text_area("お題を追加", height=100)
+        # --- 修正後 ---
+        new_odai = st.text_area("お題を追加", height=100, placeholder="ここに新しいお題を入力してください...")
+        
         new_ans = st.text_input("回答を追加")
         if st.form_submit_button("感性を覚えさせる"):
             if new_odai and new_ans:
