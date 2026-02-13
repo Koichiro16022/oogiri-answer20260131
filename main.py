@@ -405,14 +405,21 @@ with st.sidebar:
 # --- 5. メインUI ---
 st.title("大喜利アンサー")
 
-# ★修正：初期状態を「縦動画」にし、リロードしても選択を保持する
+# 選択肢のリストを定義
+mode_options = ["縦動画 (9:16)", "横動画 (16:9)"]
+
+# セッション状態に保存されている値が、リストの何番目かを探す
 if "video_mode_selector" not in st.session_state:
-    st.session_state.video_mode_selector = "縦動画 (9:16)"
+    st.session_state.video_mode_selector = mode_options[0] # 初期値：縦
+
+# 現在の選択値がリストの何番目(0 or 1)にあるか取得
+current_index = mode_options.index(st.session_state.video_mode_selector)
 
 video_mode = st.radio(
     "動画形式を選択してください", 
-    ["縦動画 (9:16)", "横動画 (16:9)"], # 縦を左側に配置（デフォルト）
-    key="video_mode_selector",        # このKeyで選択を自動記憶
+    mode_options,
+    index=current_index,  # ★ここが重要：現在の状態をインデックスで強制指定
+    key="video_mode_selector",
     horizontal=True
 )
 st.write("---") # 区切り線
