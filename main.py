@@ -237,17 +237,29 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
         # --- 修正：お題と回答の最大サイズを 120 で統一 ---
         
         # 1. お題（メイン）のサイズ調整
+        # --- 修正：すべてのテキスト（メイン・サブ・回答）を自動調整 ---
+        
+        # 1. お題（メイン：i1）のサイズ調整
         odai_len = len(odai_display)
         if odai_len <= 10:
-            odai_main_fontsize = 120  # ★100から120に引き上げ（回答と統一）
+            odai_main_fontsize = 120
         elif odai_len <= 20:
-            odai_main_fontsize = 100  # 標準
+            odai_main_fontsize = 100
         elif odai_len <= 30:
-            odai_main_fontsize = 80   # やや長い
+            odai_main_fontsize = 80
         else:
-            odai_main_fontsize = 65   # かなり長い
+            odai_main_fontsize = 65
 
-        # 2. 回答のサイズ調整（現状維持）
+        # 2. お題（サブ・背景パネル用：i2）のサイズ調整 ★ここを新設
+        # メインより一回り小さくしつつ、可変にします
+        if odai_len <= 10:
+            odai_sub_fontsize = 80   # 短い時は大きく
+        elif odai_len <= 20:
+            odai_sub_fontsize = 65   # 標準
+        else:
+            odai_sub_fontsize = 45   # 長い時は枠に収める
+
+        # 3. 回答（i3）のサイズ調整
         ans_len = len(clean_ans_disp)
         if ans_len <= 10:
             ans_fontsize = 120
@@ -256,18 +268,12 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
         else:
             ans_fontsize = 80
 
-        # --- 画像生成に反映 ---
-        i1 = create_text_image(odai_display, odai_main_fontsize, "black", pos=pos_odai_main, canvas_size=target_size) 
-        # i2, i3 はそのまま
-
-        # --- 画像生成（決定したフォントサイズを適用） ---
-        # i1：中央のお題に odai_main_fontsize を適用
+        # --- 画像生成（決定したフォントサイズをすべてに適用） ---
         i1 = create_text_image(odai_display, odai_main_fontsize, "black", pos=pos_odai_main, canvas_size=target_size) 
         
-        # i2：上部のサブお題（ここはデザイン上、55固定または少し小さく調整）
-        i2 = create_text_image(odai_display, 55, "black", pos=pos_odai_sub, canvas_size=target_size)
+        # i2 に新しく計算した odai_sub_fontsize を適用
+        i2 = create_text_image(odai_display, odai_sub_fontsize, "black", pos=pos_odai_sub, canvas_size=target_size)
         
-        # i3：回答に ans_fontsize を適用
         i3 = create_text_image(clean_ans_disp, ans_fontsize, "black", pos=pos_ans, canvas_size=target_size)
         
         c1 = ImageClip(i1).set_start(2.0).set_end(8.0)
