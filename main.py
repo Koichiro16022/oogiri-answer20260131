@@ -275,7 +275,7 @@ with st.sidebar:
                 # 回答内容の修正（text_input から text_area に変更し、高さを調整）
                 new_item_ans = col_e2.text_area(
                     f"回答 {idx}", value=item["ans"], 
-                    height=68,  # 約2〜3行分の高さ
+                    height=80,  # 約2〜3行分の高さ
                     key=f"edit_ans_{idx}", label_visibility="collapsed"
                 )
                 
