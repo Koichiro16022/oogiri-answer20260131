@@ -572,27 +572,32 @@ if st.session_state.ans_list:
         # ★修正箇所：if文の直後の行をすべて1段下げます
         # ★ここから修正（ifの前のスペースを調整して with col_button の外に出します）
         # --- 修正：動画表示と保存ボタンのブロック ---
+        # --- 修正：動画表示と保存ボタンのブロック（強制サイズ固定版） ---
         if f"temp_video_{i}" in st.session_state:
             video_path = st.session_state[f"temp_video_{i}"]
             
-            # 1. 表示サイズだけを条件分岐させる
             if video_mode == "縦動画 (9:16)":
-                # 縦動画は幅を300pxに制限して、全体を見やすくする
-                st.markdown('<div style="max-width: 300px;">', unsafe_allow_html=True)
+                # 縦動画はさらに幅を絞り、中央に寄せる
+                st.markdown(
+                    f"""
+                    <div style="display: flex; justify-content: flex-start; max-width: 260px; border: 2px solid #FFD700; border-radius: 10px; overflow: hidden;">
+                        <style> div[data-testid="stVideo"] {{ width: 260px !important; }} </style>
+                    </div>
+                    """, 
+                    unsafe_allow_html=True
+                )
                 st.video(video_path)
-                st.markdown('</div>', unsafe_allow_html=True)
             else:
-                # 横動画は今まで通り全幅表示
+                # 横動画は今まで通り
                 st.video(video_path)
             
-            # 2. 保存ボタンは if の外側に1つだけ書く（これでKeyの重複を防ぐ）
-           # 2. 保存ボタンは 1つだけに絞る（これでKeyの重複を防ぐ）
+            # 保存ボタン（共通）
             with open(video_path, "rb") as f:
                 st.download_button(
                     "💾 保存", 
                     f, 
                     file_name=video_path, 
-                    key=f"dl_v3_{i}",  # 念のため名前を少し変えておきます
+                    key=f"dl_final_fix_{i}",
                     use_container_width=True
                 )
 st.write("---")
