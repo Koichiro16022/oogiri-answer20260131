@@ -573,31 +573,44 @@ if st.session_state.ans_list:
         # ★ここから修正（ifの前のスペースを調整して with col_button の外に出します）
         # --- 修正：動画表示と保存ボタンのブロック ---
         # --- 修正：動画表示と保存ボタンのブロック（強制サイズ固定版） ---
+        # --- 修正：縦動画プレビュー時の全体幅制限 ---
         if f"temp_video_{i}" in st.session_state:
             video_path = st.session_state[f"temp_video_{i}"]
             
             if video_mode == "縦動画 (9:16)":
-                # 縦動画はさらに幅を絞り、中央に寄せる
+                # 画面中央のメインコンテンツ幅を強制的に絞るCSS
                 st.markdown(
-                    f"""
-                    <div style="display: flex; justify-content: flex-start; max-width: 200px; border: 2px solid #FFD700; border-radius: 10px; overflow: hidden;">
-                        <style> div[data-testid="stVideo"] {{ width: 200px !important; }} </style>
-                    </div>
+                    """
+                    <style>
+                        /* メインエリアの幅を制限 */
+                        div[data-testid="stMainBlockContainer"] {
+                            max-width: 600px !important;
+                            margin: auto;
+                        }
+                        /* ビデオ自体の表示サイズを固定 */
+                        video {
+                            max-height: 700px;
+                            width: auto !important;
+                            margin: auto;
+                            display: block;
+                        }
+                    </style>
                     """, 
                     unsafe_allow_html=True
                 )
                 st.video(video_path)
             else:
-                # 横動画は今まで通り
+                # 横動画の時は、以前の wide 設定を活かすためにリセット
+                st.markdown("<style>div[data-testid='stMainBlockContainer'] { max-width: 100% !important; }</style>", unsafe_allow_html=True)
                 st.video(video_path)
             
-            # 保存ボタン（共通）
+            # 保存ボタン
             with open(video_path, "rb") as f:
                 st.download_button(
                     "💾 保存", 
                     f, 
                     file_name=video_path, 
-                    key=f"dl_final_fix_{i}",
+                    key=f"dl_final_fixed_v4_{i}",
                     use_container_width=True
                 )
 st.write("---")
