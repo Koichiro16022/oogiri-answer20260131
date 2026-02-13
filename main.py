@@ -141,8 +141,33 @@ def build_controlled_audio(full_text, mode="gtts"):
     if not clips: return None
     return concatenate_audioclips(clips)
 
-def create_text_image(text, fontsize, color, pos=(960, 540)):
-    img = Image.new("RGBA", (1920, 1080), (255, 255, 255, 0))
+# --- 修正：引数に canvas_size を追加し、サイズを可変にする ---
+def create_text_image(text, fontsize, color, pos, canvas_size=(1920, 1080)):
+    # 固定の (1920, 1080) ではなく、渡された canvas_size を使う
+    img = Image.new("RGBA", canvas_size, (255, 255, 255, 0))
+    draw = ImageDraw.Draw(img)
+    try: 
+        font = ImageFont.truetype(FONT_PATH, fontsize)
+    except: 
+        font = ImageFont.load_default()
+    
+    clean_display = text.replace("_", "")
+    display_text = clean_display.replace("　", "\n").replace(" ", "\n")
+    lines = [l for l in display_text.split("\n") if l.strip()]
+    if not lines: lines = [" "]
+    
+    line_spacing = 15
+    line_heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
+    total_height = sum(line_heights) + (len(lines) - 1) * line_spacing
+    
+    current_y = pos[1] - total_height // 2
+    for i, line in enumerate(lines):
+        bbox = draw.textbbox((0, 0), line, font=font)
+        line_w = bbox[2] - bbox[0]
+        draw.text((pos[0] - line_w // 2, current_y), line, font=font, fill=color)
+        current_y += line_heights[i] + line_spacing
+    
+    return np.array(img)
     draw = ImageDraw.Draw(img)
     try: 
         font = ImageFont.truetype(FONT_PATH, fontsize)
@@ -167,33 +192,53 @@ def create_text_image(text, fontsize, color, pos=(960, 540)):
     
     return np.array(img)
 
-def create_geki_video(odai_display, odai_audio, answer_display, answer_audio):
-    # --- 1. ここでファイル名を決定 ---
+# --- 修正後：引数に video_mode を追加し、縦横の設定を分岐 ---
+
+def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, video_mode):
     import datetime
     jst = datetime.timezone(datetime.timedelta(hours=9))
     timestamp = datetime.datetime.now(jst).strftime('%Y%m%d_%H%M%S')
     out = f"{timestamp}.mp4" 
 
-    # --- 2. ファイルチェック ---
-    for f in [BASE_VIDEO, SOUND1, SOUND2]:
+    # --- 形式に応じたレイアウト設定（100%制御） ---
+    if video_mode == "縦動画 (9:16)":
+        target_size = (1080, 1920)
+        current_template = "template_v.mp4"
+        # 縦動画用の配置（中央付近にレイアウト）
+        pos_odai_main = (540, 800)   # お題（メイン）
+        pos_odai_sub = (540, 300)    # お題（サブ・上部）
+        pos_ans = (540, 1000)        # 回答（中央やや下）
+    else:
+        # ★横動画の設定（今までの位置を維持）
+        target_size = (1920, 1080)
+        current_template = BASE_VIDEO
+        pos_odai_main = (960, 530)
+        pos_odai_sub = (880, 300)
+        pos_ans = (960, 500)
+
+    # チェック対象を current_template に変更
+    for f in [current_template, SOUND1, SOUND2]:
         if not os.path.exists(f): 
             st.error(f"ファイルが見つかりません: {f}")
             return None
             
     try:
-        video = VideoFileClip(BASE_VIDEO).without_audio()
+        # テンプレートを current_template に変更
+        video = VideoFileClip(current_template).without_audio()
         
         clean_ans_disp = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer_display).strip()
         clean_ans_aud = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer_audio).strip()
         
-        i1 = create_text_image(odai_display, 100, "black", pos=(960, 530)) 
-        i2 = create_text_image(odai_display, 55, "black", pos=(880, 300))
-        i3 = create_text_image(clean_ans_disp, 120, "black", pos=(960, 500))
+        # ★引数 canvas_size と 新しく定義した pos を渡す
+        i1 = create_text_image(odai_display, 100, "black", pos=pos_odai_main, canvas_size=target_size) 
+        i2 = create_text_image(odai_display, 55, "black", pos=pos_odai_sub, canvas_size=target_size)
+        i3 = create_text_image(clean_ans_disp, 120, "black", pos=pos_ans, canvas_size=target_size)
         
         c1 = ImageClip(i1).set_start(2.0).set_end(8.0)
         c2 = ImageClip(i2).set_start(8.0).set_end(10.0)
         c3 = ImageClip(i3).set_start(10.0).set_end(16.0)
         
+        # 音声合成の処理（変更なし）
         voice_odai_clip = build_controlled_audio(odai_audio, mode="gtts")
         voice_ans_clip = build_controlled_audio(clean_ans_aud, mode="edge")
         
@@ -206,9 +251,17 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio):
         if os.path.exists(SOUND2):
             audio_list.append(AudioFileClip(SOUND2).set_start(9.0).volumex(0.3))
         
-        final = CompositeVideoClip([video, c1, c2, c3], size=(1920, 1080)).set_audio(CompositeAudioClip(audio_list))
+        # ★size を target_size に変更
+        final = CompositeVideoClip([video, c1, c2, c3], size=target_size).set_audio(CompositeAudioClip(audio_list))
         
         final.write_videofile(out, fps=24, codec="libx264", audio_codec="aac", temp_audiofile='temp-audio.m4a', remove_temp=True, logger=None)
+        
+        video.close()
+        if voice_odai_clip: voice_odai_clip.close()
+        if voice_ans_clip: voice_ans_clip.close()
+        final.close()
+        
+        return out
         
         video.close()
         if voice_odai_clip: voice_odai_clip.close()
