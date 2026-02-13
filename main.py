@@ -405,23 +405,30 @@ with st.sidebar:
 # --- 5. メインUI ---
 st.title("大喜利アンサー")
 
-# 選択肢のリストを定義
+# 1. 選択肢の定義
 mode_options = ["縦動画 (9:16)", "横動画 (16:9)"]
 
-# セッション状態に保存されている値が、リストの何番目かを探す
+# 2. 初回起動時のみ初期値をセット
 if "video_mode_selector" not in st.session_state:
-    st.session_state.video_mode_selector = mode_options[0] # 初期値：縦
+    st.session_state.video_mode_selector = "縦動画 (9:16)"
 
-# 現在の選択値がリストの何番目(0 or 1)にあるか取得
-current_index = mode_options.index(st.session_state.video_mode_selector)
+# 3. 選択が変わった瞬間に実行される関数（これが確実に保持する秘訣）
+def on_mode_change():
+    # ラジオボタンの値を即座にセッション状態に固定する
+    st.session_state.video_mode_selector = st.session_state.new_mode
 
+# 4. ラジオボタン本体
 video_mode = st.radio(
     "動画形式を選択してください", 
     mode_options,
-    index=current_index,  # ★ここが重要：現在の状態をインデックスで強制指定
-    key="video_mode_selector",
+    index=mode_options.index(st.session_state.video_mode_selector),
+    key="new_mode",          # 一時的な入力キー
+    on_change=on_mode_change, # 変わった瞬間に保存関数を呼ぶ
     horizontal=True
 )
+
+# 最終的にシステムが使う変数を同期
+video_mode = st.session_state.video_mode_selector
 st.write("---") # 区切り線
 
 kw_col, clr_col, rnd_col = st.columns([5, 1, 1])
