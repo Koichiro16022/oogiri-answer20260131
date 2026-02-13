@@ -143,31 +143,33 @@ def build_controlled_audio(full_text, mode="gtts"):
 
 # --- 修正：引数に canvas_size を追加し、サイズを可変にする ---
 def create_text_image(text, fontsize, color, pos, canvas_size=(1920, 1080)):
-    # キャンバス作成
+    # 1. 指定されたサイズでRGBA画像を作成
     img = Image.new("RGBA", canvas_size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
+    
+    # 2. フォントの読み込み（ここで外からの fontsize が適用されます）
     try: 
         font = ImageFont.truetype(FONT_PATH, fontsize)
     except: 
         font = ImageFont.load_default()
     
-    # テキストのクリーニングと改行処理
+    # 3. テキストの整形
     clean_display = text.replace("_", "")
     display_text = clean_display.replace("　", "\n").replace(" ", "\n")
     lines = [l for l in display_text.split("\n") if l.strip()]
     if not lines: lines = [" "]
     
     line_spacing = 15
-    # 各行のサイズを計算
+    # 各行の高さを計算して全体の高さを出す
     line_heights = [draw.textbbox((0, 0), line, font=font)[3] - draw.textbbox((0, 0), line, font=font)[1] for line in lines]
     total_height = sum(line_heights) + (len(lines) - 1) * line_spacing
     
-    # 描画開始位置（中央揃え）
+    # 4. 描画位置の計算（Y軸の中央揃え）
     current_y = pos[1] - total_height // 2
     for i, line in enumerate(lines):
         bbox = draw.textbbox((0, 0), line, font=font)
         line_w = bbox[2] - bbox[0]
-        # 指定された座標(pos)を基準に描画
+        # X軸の中央揃えで描画
         draw.text((pos[0] - line_w // 2, current_y), line, font=font, fill=color)
         current_y += line_heights[i] + line_spacing
     
