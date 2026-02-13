@@ -370,8 +370,10 @@ if st.session_state.selected_odai:
     
     st.write("---")
     st.subheader("🎭 回答の生成")
+
+    # --- 修正後：3種類に集約 ---
+    style = st.selectbox("ユーモアの種類", ["通常", "知的", "ブラック"])
     
-    style = st.selectbox("ユーモアの種類", ["通常", "知的", "シュール", "ブラック"])
     
     if st.button("🚀 回答20案生成", type="primary", use_container_width=True):
         with st.spinner("爆笑を追求中..."):
