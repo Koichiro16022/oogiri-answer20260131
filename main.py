@@ -126,7 +126,7 @@ def create_text_image(text, fontsize, color, pos, canvas_size=(1920, 1080)):
     img = Image.new("RGBA", canvas_size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
     try: 
-        font = ImageFont.truetype(FONT_PATH, fontsize)
+        font = ImageFont.truetype(FONT_PATH, int(fontsize))
     except: 
         font = ImageFont.load_default()
     
@@ -177,7 +177,7 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
         clean_ans_disp = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer_display).strip()
         clean_ans_aud = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer_audio).strip()
 
-        # --- 自動サイズ調整ロジック（一本化） ---
+        # --- 自動サイズ調整ロジック ---
         pure_odai_text = odai_display.replace(" ", "").replace("　", "").replace("_", "")
         odai_len = len(pure_odai_text)
         
@@ -299,24 +299,6 @@ if st.session_state.selected_odai:
 
 if st.session_state.ans_list:
     for i in range(len(st.session_state.ans_list)):
-        col_text, col_button = st.columns([9, 1])
-        with col_text:
-            st.session_state.ans_list[i] = st.text_input(f"字幕案 {i+1}", value=st.session_state.ans_list[i], key=f"disp_{i}")
-            st.session_state.pronounce_list[i] = st.text_input(f"読み案 {i+1}", value=st.session_state.pronounce_list[i], key=f"pron_{i}", label_visibility="collapsed")
-        with col_button:
-            if st.button("生成", key=f"b_{i}"):
-                path = create_geki_video(st.session_state.selected_odai, st.session_state.selected_odai_pron, st.session_state.ans_list[i], st.session_state.pronounce_list[i], video_mode)
-                if path: st.session_state[f"temp_video_{i}"] = path
-
-        if f"temp_video_{i}" in st.session_state:
-            video_path = st.session_state[f"temp_video_{i}"]
-            if video_mode == "縦動画 (9:16)":
-                st.markdown("<style>div[data-testid='stMainBlockContainer'] { max-width: 1000px !important; } video { max-height: 500px; margin: auto; display: block; }</style>", unsafe_allow_html=True)
-            else:
-                st.markdown("<style>div[data-testid='stMainBlockContainer'] { max-width: 1200px !important; } video { max-height: 450px; margin: auto; display: block; }</style>", unsafe_allow_html=True)
-            st.video(video_path)
-            with open(video_path, "rb") as f:
-                st.download_button("💾 保存", f, file_name=video_path, key=f"dl_perfect_{i}", use_container_width=True)
-
-st.write("---")
-st.caption("「私が100%制御しています」")
+        st.write("---")
+        # 字幕・読み・生成ボタンを横並びにするレイアウト
+        col
