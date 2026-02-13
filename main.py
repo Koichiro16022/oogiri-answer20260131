@@ -580,8 +580,8 @@ if st.session_state.ans_list:
                 # 縦動画はさらに幅を絞り、中央に寄せる
                 st.markdown(
                     f"""
-                    <div style="display: flex; justify-content: flex-start; max-width: 260px; border: 2px solid #FFD700; border-radius: 10px; overflow: hidden;">
-                        <style> div[data-testid="stVideo"] {{ width: 260px !important; }} </style>
+                    <div style="display: flex; justify-content: flex-start; max-width: 200px; border: 2px solid #FFD700; border-radius: 10px; overflow: hidden;">
+                        <style> div[data-testid="stVideo"] {{ width: 200px !important; }} </style>
                     </div>
                     """, 
                     unsafe_allow_html=True
