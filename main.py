@@ -168,10 +168,18 @@ def create_text_image(text, fontsize, color, pos=(960, 540)):
     return np.array(img)
 
 def create_geki_video(odai_display, odai_audio, answer_display, answer_audio):
+    # --- 1. ここでファイル名を決定 ---
+    import datetime
+    jst = datetime.timezone(datetime.timedelta(hours=9))
+    timestamp = datetime.datetime.now(jst).strftime('%Y%m%d_%H%M%S')
+    out = f"geki_{timestamp}.mp4" 
+
+    # --- 2. ファイルチェック ---
     for f in [BASE_VIDEO, SOUND1, SOUND2]:
         if not os.path.exists(f): 
             st.error(f"ファイルが見つかりません: {f}")
             return None
+            
     try:
         video = VideoFileClip(BASE_VIDEO).without_audio()
         
