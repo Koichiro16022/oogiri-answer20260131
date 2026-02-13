@@ -254,12 +254,14 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
 
         # 2. お題サブ (i2: 背景パネル用) のサイズ
         # 150から、パネルにちょうど収まる「100」前後に戻します
-        if odai_len <= 15:
-            odai_sub_fontsize = 100   # ★ここを150から100へ
-        elif odai_len <= 25:
-            odai_sub_fontsize = 80    # ★ここを75から80へ
+        if odai_len <= 10:
+            odai_sub_fontsize = 120   # ★ここを150から100へ
+        elif odai_len <= 20:
+            odai_sub_fontsize = 100    # ★ここを75から80へ
+        elif odai_len <= 30:
+            odai_main_fontsize = 80
         else:
-            odai_sub_fontsize = 55    # そのまま
+            odai_sub_fontsize = 65    # そのまま
 
         # 3. 回答（i3）のサイズ調整
         ans_len = len(clean_ans_disp)
