@@ -573,8 +573,25 @@ if st.session_state.ans_list:
         # ★ここから修正（ifの前のスペースを調整して with col_button の外に出します）
         if f"temp_video_{i}" in st.session_state:
             video_path = st.session_state[f"temp_video_{i}"]
-            st.video(video_path)
+            
+            # --- プレビューサイズの制御 ---
+            if video_mode == "縦動画 (9:16)":
+                # 縦動画は幅を絞って、全体が見えるようにする
+                st.video(video_path, format="video/mp4", start_time=0)
+                # もしこれでも大きい場合は、以下のCSSを適用したdivで囲む方法もありますが、
+                # まずは標準の st.video で確認してください。
+            else:
+                # 横動画は今まで通り
+                st.video(video_path)
+            
             with open(video_path, "rb") as f:
+                st.download_button(
+                    "💾 保存", 
+                    f, 
+                    file_name=video_path, 
+                    key=f"dl_{i}",
+                    use_container_width=True # ボタンを横いっぱいに広げて押しやすく
+                )
                 st.download_button(
                     "💾 保存", 
                     f, 
