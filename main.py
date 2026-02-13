@@ -220,11 +220,11 @@ with st.sidebar:
     
     # 学習フォーム
     with st.form("learning_form", clear_on_submit=True):
-        # --- 修正後 ---
         new_odai = st.text_area("お題を追加", height=150, placeholder="ここに新しいお題を入力してください...")
-        
-        # --- 修正後 ---
         new_ans = st.text_area("回答を追加", height=150, placeholder="ここに新しい回答を入力してください...")
+        
+        # ★追加：ユーモアの種類を選択できるようにする
+        new_style = st.selectbox("ユーモアの種類", ["通常", "知的", "ブラック"])
         
         if st.form_submit_button("感性を覚えさせる"):
             if new_odai and new_ans:
@@ -233,13 +233,16 @@ with st.sidebar:
                     for ex in st.session_state.golden_examples
                 )
                 if not is_duplicate:
+                    # ★修正：固定の "通常" ではなく、選んだ new_style を保存する
                     st.session_state.golden_examples.append({
                         "odai": new_odai, 
                         "ans": new_ans, 
-                        "style": "通常"
+                        "style": new_style 
                     })
                     if save_data():
                         st.success("✅ 登録し、保存しました")
+                        # 画面をリロードして反映
+                        st.rerun() 
                     else:
                         st.error("❌ 登録しましたが保存に失敗しました")
                 else:
