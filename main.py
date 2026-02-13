@@ -207,7 +207,7 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio):
             audio_list.append(AudioFileClip(SOUND2).set_start(9.0).volumex(0.3))
         
         final = CompositeVideoClip([video, c1, c2, c3], size=(1920, 1080)).set_audio(CompositeAudioClip(audio_list))
-        out = "geki.mp4"
+        
         final.write_videofile(out, fps=24, codec="libx264", audio_codec="aac", temp_audiofile='temp-audio.m4a', remove_temp=True, logger=None)
         
         video.close()
@@ -460,6 +460,7 @@ if st.session_state.ans_list:
 
         # ★変更点2：with col_button の外（インデントを戻した位置）で大きく表示する
         # ★修正箇所：if文の直後の行をすべて1段下げます
+        # ★ここから修正（ifの前のスペースを調整して with col_button の外に出します）
         if f"temp_video_{i}" in st.session_state:
             video_path = st.session_state[f"temp_video_{i}"]
             st.video(video_path)
