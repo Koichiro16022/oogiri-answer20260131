@@ -1,10 +1,3 @@
-# 大喜利アンサー プロジェクトバックアップ
-
-## 📅 最終更新日: 2026/02/13
-- 縦横動画切り替え対応
-- お題・回答のフォントサイズ自動調整ロジック実装済み
-
-## 💾 安定稼働コード
 import re
 import os
 import random
@@ -121,7 +114,7 @@ def save_data():
         st.error(f"保存エラー: {e}")
         return False
 
-async def save_edge_voice(text, filename, voice_name, rate="+15%"):
+async def save_edge_voice(text, filename, voice_name, rate="+20%"):
     communicate = edge_tts.Communicate(text, voice_name, rate=rate)
     await communicate.save(filename)
 
@@ -134,8 +127,8 @@ def build_controlled_audio(full_text, mode="gtts"):
     for i, part in enumerate(parts):
         if not part: continue
         if '_' in part:
-            # --- 修正：0.1 を 0.08 に変更 ---
-            duration = len(part) * 0.08
+            # --- 修正：0.1 を 0.06 に変更 ---
+            duration = len(part) * 0.06
             clips.append(make_silence(duration))
         else:
             tmp_filename = f"part_{mode}_{i}.mp3"
