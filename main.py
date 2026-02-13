@@ -127,8 +127,8 @@ def build_controlled_audio(full_text, mode="gtts"):
     for i, part in enumerate(parts):
         if not part: continue
         if '_' in part:
-            # --- 修正：0.1 を 0.02 に変更 ---
-            duration = len(part) * 0.02
+            # --- 修正：0.1 を 0.08 に変更 ---
+            duration = len(part) * 0.08
             clips.append(make_silence(duration))
         else:
             tmp_filename = f"part_{mode}_{i}.mp3"
