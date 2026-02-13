@@ -231,18 +231,34 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
         clean_ans_aud = re.sub(r'^[0-9０-９\.\s、。・＊\*]+', '', answer_audio).strip()
 
         # 文字数をカウント
-        ans_len = len(clean_ans_disp)
+        # --- 修正後：お題と回答の両方を自動サイズ調整 ---
         
-        if ans_len <= 10:
-            ans_fontsize = 120  # 10文字以内：特大
-        elif ans_len <= 20:
-            ans_fontsize = 100  # 20文字以内：標準
+        # 1. お題（メイン）のサイズ調整ロジック
+        odai_len = len(odai_display)
+        if odai_len <= 15:
+            odai_main_fontsize = 100  # 標準（これまで通り）
+        elif odai_len <= 25:
+            odai_main_fontsize = 80   # やや長い
         else:
-            ans_fontsize = 80   # 21文字以上：小（はみ出し防止）
+            odai_main_fontsize = 65   # かなり長い（はみ出し防止）
 
-        # i3 のフォントサイズに ans_fontsize を適用
-        i1 = create_text_image(odai_display, 100, "black", pos=pos_odai_main, canvas_size=target_size) 
+        # 2. 回答のサイズ調整ロジック
+        ans_len = len(clean_ans_disp)
+        if ans_len <= 10:
+            ans_fontsize = 120
+        elif ans_len <= 20:
+            ans_fontsize = 100
+        else:
+            ans_fontsize = 80
+
+        # --- 画像生成（決定したフォントサイズを適用） ---
+        # i1：中央のお題に odai_main_fontsize を適用
+        i1 = create_text_image(odai_display, odai_main_fontsize, "black", pos=pos_odai_main, canvas_size=target_size) 
+        
+        # i2：上部のサブお題（ここはデザイン上、55固定または少し小さく調整）
         i2 = create_text_image(odai_display, 55, "black", pos=pos_odai_sub, canvas_size=target_size)
+        
+        # i3：回答に ans_fontsize を適用
         i3 = create_text_image(clean_ans_disp, ans_fontsize, "black", pos=pos_ans, canvas_size=target_size)
         
         c1 = ImageClip(i1).set_start(2.0).set_end(8.0)
