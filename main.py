@@ -234,15 +234,20 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
         # --- 修正後：お題と回答の両方を自動サイズ調整 ---
         
         # 1. お題（メイン）のサイズ調整ロジック
+        # --- 修正：お題と回答の最大サイズを 120 で統一 ---
+        
+        # 1. お題（メイン）のサイズ調整
         odai_len = len(odai_display)
-        if odai_len <= 15:
-            odai_main_fontsize = 100  # 標準（これまで通り）
-        elif odai_len <= 25:
+        if odai_len <= 10:
+            odai_main_fontsize = 120  # ★100から120に引き上げ（回答と統一）
+        elif odai_len <= 20:
+            odai_main_fontsize = 100  # 標準
+        elif odai_len <= 30:
             odai_main_fontsize = 80   # やや長い
         else:
-            odai_main_fontsize = 65   # かなり長い（はみ出し防止）
+            odai_main_fontsize = 65   # かなり長い
 
-        # 2. 回答のサイズ調整ロジック
+        # 2. 回答のサイズ調整（現状維持）
         ans_len = len(clean_ans_disp)
         if ans_len <= 10:
             ans_fontsize = 120
@@ -250,6 +255,10 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
             ans_fontsize = 100
         else:
             ans_fontsize = 80
+
+        # --- 画像生成に反映 ---
+        i1 = create_text_image(odai_display, odai_main_fontsize, "black", pos=pos_odai_main, canvas_size=target_size) 
+        # i2, i3 はそのまま
 
         # --- 画像生成（決定したフォントサイズを適用） ---
         # i1：中央のお題に odai_main_fontsize を適用
