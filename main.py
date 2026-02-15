@@ -293,17 +293,16 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
         if voice_odai_clip: audio_list.append(voice_odai_clip.set_start(2.5))
         if voice_ans_clip: audio_list.append(voice_ans_clip.set_start(10.5))
         
+        # 呪いを解く「絶対固定」のロジック
         if os.path.exists(SOUND1):
-            from moviepy.audio.fx.all import audio_normalize
-            # v2（100%音源）を正規化してから、さらに0.03（3%）まで絞り込む
-            # これが理論上、最も音量がブレない「鉄壁」の組み合わせです
-            sound_clip = AudioFileClip(SOUND1).fx(audio_normalize).set_start(0.8).volumex(0.02)
-            audio_list.append(sound_clip)
+            # normalizeは素材に依存して計算がブレるため、あえて削除。
+            # 直接、数値で叩く。これが最も「計算ミス」が起きない形です。
+            s1_clip = AudioFileClip(SOUND1).set_start(0.8).volumex(0.03)
+            audio_list.append(s1_clip)
             
         if os.path.exists(SOUND2):
-            # SOUND2ももし不安定なら normalize を入れても良いですが、
-            # まずは現状の 0.2 で様子を見ましょう
-            audio_list.append(AudioFileClip(SOUND2).set_start(9.0).volumex(0.2))
+            s2_clip = AudioFileClip(SOUND2).set_start(9.0).volumex(0.2)
+            audio_list.append(s2_clip)
         
         # ★size を target_size に変更
         final = CompositeVideoClip([video, c1, c2, c3], size=target_size).set_audio(CompositeAudioClip(audio_list))
