@@ -290,7 +290,7 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
         if voice_ans_clip: audio_list.append(voice_ans_clip.set_start(10.5))
         
         if os.path.exists(SOUND1):
-            audio_list.append(AudioFileClip(SOUND1).set_start(0.8).volumex(0.1))
+            audio_list.append(AudioFileClip(SOUND1).set_start(0.8)
         if os.path.exists(SOUND2):
             audio_list.append(AudioFileClip(SOUND2).set_start(9.0).volumex(0.3))
         
