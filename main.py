@@ -22,14 +22,7 @@ CHOSEN_MODEL = 'models/gemini-2.0-flash'
 FONT_PATH = "NotoSansJP-Bold.ttf"
 BASE_VIDEO = "template.mp4"
 
-# 変数定義を更新
-SOUND1 = "sound1_v2.mp3"
 
-if os.path.exists(SOUND1):
-    # normalizeを挟まず、100%音源を「0.03」の力で叩く
-    # これが最も計算のブレが少ない形です
-    sound_clip = AudioFileClip(SOUND1).set_start(0.8).volumex(0.03)
-    audio_list.append(sound_clip)
     
 SOUND2 = "sound2.mp3"
 JST = timezone(timedelta(hours=9))  # ★日本時間用
