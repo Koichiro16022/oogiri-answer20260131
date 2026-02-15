@@ -297,7 +297,7 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
             from moviepy.audio.fx.all import audio_normalize
             # v2（100%音源）を正規化してから、さらに0.03（3%）まで絞り込む
             # これが理論上、最も音量がブレない「鉄壁」の組み合わせです
-            sound_clip = AudioFileClip(SOUND1).fx(audio_normalize).set_start(0.8).volumex(0.03)
+            sound_clip = AudioFileClip(SOUND1).fx(audio_normalize).set_start(0.8).volumex(0.02)
             audio_list.append(sound_clip)
             
         if os.path.exists(SOUND2):
