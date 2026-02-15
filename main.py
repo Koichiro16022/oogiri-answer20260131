@@ -22,9 +22,10 @@ CHOSEN_MODEL = 'models/gemini-2.0-flash'
 FONT_PATH = "NotoSansJP-Bold.ttf"
 BASE_VIDEO = "template.mp4"
 
-
-    
+# ここで定義（関数の外に書くことで、どこからでも参照可能になります）
+SOUND1 = "sound1_v2.mp3"
 SOUND2 = "sound2.mp3"
+
 JST = timezone(timedelta(hours=9))  # ★日本時間用
 
 st.set_page_config(page_title="大喜利アンサー", layout="wide")
