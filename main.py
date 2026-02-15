@@ -292,7 +292,7 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
         if os.path.exists(SOUND1):
             audio_list.append(AudioFileClip(SOUND1).set_start(0.8))
         if os.path.exists(SOUND2):
-            audio_list.append(AudioFileClip(SOUND2).set_start(9.0).volumex(0.3))
+            audio_list.append(AudioFileClip(SOUND2).set_start(9.0).volumex(0.2))
         
         # ★size を target_size に変更
         final = CompositeVideoClip([video, c1, c2, c3], size=target_size).set_audio(CompositeAudioClip(audio_list))
