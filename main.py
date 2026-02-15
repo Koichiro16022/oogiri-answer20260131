@@ -21,7 +21,7 @@ else:
 CHOSEN_MODEL = 'models/gemini-2.0-flash'
 FONT_PATH = "NotoSansJP-Bold.ttf"
 BASE_VIDEO = "template.mp4"
-SOUND1 = "sound1.mp3"
+SOUND1 = "sound1_v1.mp3"
 SOUND2 = "sound2.mp3"
 JST = timezone(timedelta(hours=9))  # ★日本時間用
 
