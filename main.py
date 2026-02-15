@@ -198,6 +198,7 @@ def create_text_image(text, fontsize, color, pos, canvas_size=(1920, 1080)):
 # --- 修正後：引数に video_mode を追加し、縦横の設定を分岐 ---
 
 def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, video_mode):
+    global SOUND1, SOUND2  # これを追加！外側の変数を使うという宣言です
     import datetime
     jst = datetime.timezone(datetime.timedelta(hours=9))
     timestamp = datetime.datetime.now(jst).strftime('%Y%m%d_%H%M%S')
