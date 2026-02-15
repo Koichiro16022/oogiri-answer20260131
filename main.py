@@ -307,11 +307,14 @@ def create_geki_video(odai_display, odai_audio, answer_display, answer_audio, vi
         # ★size を target_size に変更
         final = CompositeVideoClip([video, c1, c2, c3], size=target_size).set_audio(CompositeAudioClip(audio_list))
         
-        final.write_videofile(out, fps=24, codec="libx264", audio_codec="aac", temp_audiofile='temp-audio.m4a', remove_temp=True, logger=None)
+        final.write_videofile(out, fps=24, codec="libx264", audio_codec="aac", logger=None)
         
+        # すべてのクリップを物理的に閉じる（キャッシュ汚染を防ぐ）
         video.close()
         if voice_odai_clip: voice_odai_clip.close()
         if voice_ans_clip: voice_ans_clip.close()
+        if os.path.exists(SOUND1): s1_clip.close()
+        if os.path.exists(SOUND2): s2_clip.close()
         final.close()
         
         return out
